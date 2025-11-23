@@ -167,11 +167,29 @@ public class AnalysisService : IAsyncDisposable
             log.Add(line);
             if (line.StartsWith("bestmove ", StringComparison.OrdinalIgnoreCase))
             {
-                // Format: bestmove <move> [ponder <move>]
-                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                if (parts.Length >= 2) best = parts[1];
-                var idx = Array.IndexOf(parts, "ponder");
-                if (idx >= 0 && idx + 1 < parts.Length) ponder = parts[idx + 1];
+                // Typical formats seen in AEI engines:
+                // 1) bestmove <step1> <step2> <step3> <step4>
+                // 2) bestmove <step...> ponder <move>
+                // We want to capture the full move sequence after 'bestmove ' (until optional ' ponder ').
+                var afterKeyword = line.Substring("bestmove ".Length).Trim();
+                var ponderMarker = " ponder ";
+                var ponderIndex = afterKeyword.IndexOf(ponderMarker, StringComparison.OrdinalIgnoreCase);
+                if (ponderIndex >= 0)
+                {
+                    var bestSeq = afterKeyword.Substring(0, ponderIndex).Trim();
+                    var ponderPart = afterKeyword.Substring(ponderIndex + ponderMarker.Length).Trim();
+                    // Some engines may include extra tokens after ponder; we take the next token as the ponder move
+                    if (!string.IsNullOrWhiteSpace(ponderPart))
+                    {
+                        var spaceIdx = ponderPart.IndexOf(' ');
+                        ponder = spaceIdx > 0 ? ponderPart.Substring(0, spaceIdx) : ponderPart;
+                    }
+                    best = bestSeq;
+                }
+                else
+                {
+                    best = afterKeyword;
+                }
                 break;
             }
         }

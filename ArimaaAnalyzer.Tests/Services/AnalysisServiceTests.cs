@@ -93,7 +93,18 @@ public class AnalysisServiceTests
             // Ask engine to move; capture output until bestmove
             var (best, ponder, log) = await svc.GoAsync(string.Empty);
 
-            best.Should().NotBeNullOrWhiteSpace("engine should return a bestmove");
+            best.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
+
+            // Validate our parsing matches the engine's raw line by reconstructing expected sequence
+            var bestLine = log.LastOrDefault(l => l.StartsWith("bestmove ", StringComparison.OrdinalIgnoreCase));
+            if (bestLine is not null)
+            {
+                var after = bestLine.Substring("bestmove ".Length).Trim();
+                var ponderMarker = " ponder ";
+                var idx = after.IndexOf(ponderMarker, StringComparison.OrdinalIgnoreCase);
+                var expected = idx >= 0 ? after.Substring(0, idx).Trim() : after;
+                best.Should().Be(expected);
+            }
         }
         finally
         {
