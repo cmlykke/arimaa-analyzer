@@ -37,24 +37,17 @@ public sealed class GameState
         }
     }
 
-    // Extremely simplified move: move a piece to an adjacent empty square.
+    // Extremely simplified move: move a piece to any empty square on the board.
     public bool TryMove(Position from, Position to)
     {
         if (!from.IsOnBoard || !to.IsOnBoard) return false;
+        if (from == to) return false;
         var piece = _board[from.Row, from.Col];
         if (piece is null) return false;
         if (_board[to.Row, to.Col] is not null) return false;
 
-        // Must be orthogonally adjacent
-        var dr = Math.Abs(to.Row - from.Row);
-        var dc = Math.Abs(to.Col - from.Col);
-        if ((dr == 1 && dc == 0) || (dr == 0 && dc == 1))
-        {
-            _board[to.Row, to.Col] = piece;
-            _board[from.Row, from.Col] = null;
-            return true;
-        }
-
-        return false;
+        _board[to.Row, to.Col] = piece;
+        _board[from.Row, from.Col] = null;
+        return true;
     }
 }
