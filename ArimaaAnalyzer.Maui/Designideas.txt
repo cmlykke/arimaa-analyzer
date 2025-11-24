@@ -1,0 +1,32 @@
+﻿2025-11-24
+
+On the board, pieces can now 
+be dragged and dropped to any vanct square.
+
+Board behavior can be changed through 
+a BoardBehavior parameter class.
+
+- create buttons that
+reset a board position,
+and a button that confirms the 
+board position.
+
+- make sure that the board 
+uses the ArimaaEngineInterface 
+sytax to save the currenct board position.
+
+- Change the board position 
+from a string to a tree structure that,
+ to begin with,
+perhaps should only have one branch 
+per node. 
+
+- toggle an enable/disable 
+AI analysis toggle, that 
+sends the poard position 
+to the Ai, and sets the new board 
+position according to the Ai.
+This means that the board 
+tree structure should tell the user that
+the current board position is
+an Ai position.
