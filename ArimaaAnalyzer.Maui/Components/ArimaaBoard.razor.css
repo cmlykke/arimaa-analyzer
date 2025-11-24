@@ -31,5 +31,8 @@
 .square img {
   width: 44px;
   height: 44px;
-  pointer-events: none; /* allow click to hit the square */
+  /* Allow the image to receive drag events */
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
 }

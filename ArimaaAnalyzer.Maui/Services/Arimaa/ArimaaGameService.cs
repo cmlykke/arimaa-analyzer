@@ -29,5 +29,12 @@ public sealed class ArimaaGameService
         return success;
     }
 
+    // Drag-and-drop entry point: move directly from a known origin to target.
+    public bool TryMove(Position from, Position to)
+    {
+        if (!from.IsOnBoard || !to.IsOnBoard) return false;
+        return State.TryMove(from, to);
+    }
+
     public void ClearSelection() => Selected = null;
 }

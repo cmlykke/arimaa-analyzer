@@ -13,13 +13,17 @@
                 // With 0-based indices, columns A..H -> 0..7, rows top(8)..bottom(1) -> 0..7
                 // So C3 -> (row 5, col 2), F3 -> (5,5), C6 -> (2,2), F6 -> (2,5)
                 var isDark = (r == 2 || r == 5) && (c == 2 || c == 5);
-                var isSelected = Game.Selected is { } s && s == pos;
-                <div class="square @(isDark ? "dark" : "light") @(isSelected ? "selected" : null)"
-                     @onclick="() => OnSquareClick(pos)">
+                <div class="square @(isDark ? "dark" : "light")"
+                     @onpointerup="() => OnPointerUp(pos)">
                     @if (piece is not null)
                     {
-                        <img src="@($"pieces/{piece.SvgFileName}")" alt="@($"{piece.Side} {piece.Type}")" />
-                    }
+                        <img src="@($"pieces/{piece.SvgFileName}")"
+                             alt="@($"{piece.Side} {piece.Type}")"
+                             draggable="false"
+                             title="Drag to move"
+                             @onpointerdown="() => OnDragStart(pos)"
+                             />
+                }
                 </div>
             }
         </div>
@@ -27,29 +31,24 @@
 </div>
 
 @code {
-    private void OnSquareClick(Position pos)
+    private Position? _dragFrom;
+
+    private void OnDragStart(Position from)
     {
-        var piece = Game.State.GetPiece(pos);
-        if (Game.Selected is null)
+        // Only start a drag if there's a piece on the square
+        if (Game.State.GetPiece(from) is not null)
         {
-            if (piece is not null)
-            {
-                Game.Select(pos);
-            }
-            return;
+            _dragFrom = from;
         }
+    }
 
-        // If clicking the selected square, clear selection
-        if (Game.Selected == pos)
+    private void OnPointerUp(Position target)
+    {
+        if (_dragFrom is { } from)
         {
-            Game.ClearSelection();
-            return;
+            // Attempt the move using the simplified rules
+            Game.TryMove(from, target);
         }
-
-        // Try move, otherwise select new piece if there is one
-        if (!Game.TryMoveTo(pos) && piece is not null)
-        {
-            Game.Select(pos);
-        }
+        _dragFrom = null;
     }
 }
