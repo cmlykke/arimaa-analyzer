@@ -21,6 +21,22 @@ main {
     align-items: center;
 }
 
+/* Visible burger button in the header (works on all platforms) */
+.burger-button {
+    display: inline-block;
+    width: 3.5rem;
+    height: 2.5rem;
+    margin-right: auto; /* push following links to the right */
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: .25rem;
+    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 0, 0, 0.55%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center/1.75rem rgba(0, 0, 0, 0.03);
+}
+
+.burger-button:active {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
     .top-row ::deep a, .top-row ::deep .btn-link {
         white-space: nowrap;
         margin-left: 1.5rem;

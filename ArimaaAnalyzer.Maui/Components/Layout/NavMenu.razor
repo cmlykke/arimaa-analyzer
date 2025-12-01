@@ -4,27 +4,30 @@
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler"/>
+<input id="nav-toggle" type="checkbox" title="Navigation menu" aria-label="Toggle navigation menu" class="navbar-toggler"/>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+<!-- Backdrop to close the menu when clicking outside -->
+<div class="backdrop" onclick="document.getElementById('nav-toggle').click()"></div>
+
+<div class="nav-scrollable">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" onclick="document.getElementById('nav-toggle').checked=false">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
+            <NavLink class="nav-link" href="counter" onclick="document.getElementById('nav-toggle').checked=false">
                 <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
+            <NavLink class="nav-link" href="weather" onclick="document.getElementById('nav-toggle').checked=false">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="arimaa">
+            <NavLink class="nav-link" href="arimaa" onclick="document.getElementById('nav-toggle').checked=false">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Arimaa
             </NavLink>
         </div>

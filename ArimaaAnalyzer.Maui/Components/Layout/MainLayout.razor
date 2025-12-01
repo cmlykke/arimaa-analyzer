@@ -1,12 +1,12 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu/>
-    </div>
+    <NavMenu/>
 
     <main>
         <div class="top-row px-4">
+            <!-- Burger trigger placed in the global top bar to ensure visibility on Android/iOS -->
+            <label for="nav-toggle" class="burger-button" title="Open menu" aria-label="Open navigation menu"></label>
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
