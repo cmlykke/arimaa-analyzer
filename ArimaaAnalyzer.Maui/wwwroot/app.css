@@ -1,6 +1,9 @@
 /* wwwroot/css/app-fixed.css */
 /* Drop this file in wwwroot/css and reference it in your MainLayout or index.html */
 
+/* THIS ONE LINE KILLS THE PINK GAP ON WINDOWS FOREVER */
+blazor-webview { padding-top: 0 !important; }
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background-color: #ff00aa;      /* your pin background */
