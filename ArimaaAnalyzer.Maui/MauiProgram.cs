@@ -13,7 +13,8 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddSingleton<Services.Arimaa.ArimaaGameService>();
-
+        builder.Services.AddSingleton<IPlatformService, PlatformService>();
+        
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();

@@ -4,7 +4,12 @@
 
     <PropertyGroup>
         <!-- Add a pure .NET target for testability (no MAUI) and MAUI platform TFMs -->
-        <TargetFrameworks>net8.0;net10.0;net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks>
+            net10.0-android
+            net10.0-ios
+            net10.0-maccatalyst
+            net8.0-windows10.0.19041.0
+        </TargetFrameworks>
         <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
         <AndroidSdkDirectory>C:\Users\hjlyk\AppData\Local\Android\Sdk</AndroidSdkDirectory>
 
@@ -129,6 +134,7 @@
     <ItemGroup Condition=" '$(UseMaui)' == 'true' ">
       <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)"/>
       <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)"/>
+      <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250909003" />
     </ItemGroup>
 
     <ItemGroup>

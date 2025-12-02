@@ -13,18 +13,32 @@
 
 <body>
 
-    <div class="status-bar-safe-area"></div>
+<div class="status-bar-safe-area"></div>
 
-    <div id="app">Loading...</div>
+<div id="app">Loading...</div>
 
-    <div id="blazor-error-ui" data-nosnippet>
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
-        <span class="dismiss">🗙</span>
-    </div>
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">Dismiss</span>
+</div>
 
-    <script src="_framework/blazor.webview.js" autostart="false"></script>
+<!-- This script makes your navbar draggable on Windows -->
+<script>
+    // Call this from Blazor: await JS.InvokeVoidAsync("makeNavbarDraggable", ElementReference);
+    window.makeNavbarDraggable = (element) => {
+        element.addEventListener('mousedown', (e) => {
+            // Don't start dragging if user clicked a button, link, input, etc.
+            if (e.button !== 0) return; // only left mouse button
+            if (e.target.closest('a, button, input, textarea, select, [role="button"]')) return;
 
+            // Call the C# method in WindowService
+            DotNet.invokeMethodAsync('ArimaaAnalyzer.Maui', 'StartWindowDrag')
+                .catch(err => console.error('Drag failed:', err));
+        });
+    };
+</script>
+
+<script src="_framework/blazor.webview.js" autostart="false"></script>
 </body>
-
 </html>
