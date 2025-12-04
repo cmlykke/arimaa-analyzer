@@ -1,4 +1,38 @@
-﻿2025-11-24
+﻿
+2025-12-04
+
+--to be done to improve move validation
+in CorrectMoveService and GameState needs to be changed. 
+so game state is only saved as a single String, and not nested lists of SVG. references.
+
+in CorrectMoveService, create a function that 
+takes a state and a move, and checks if a capture should take place.
+create it, by asking the Ai to extract the code needed for 
+checking capture.
+
+in CorrectMoveService, implement push pull.
+
+ask the AI if more is needed than push pull.
+
+-- make the inner and outer board parimiters adjust to eachother,
+such that the output board size is as if the inner board was 9x9.
+
+--create a section next to the main board 
+on Android horizontal: the section should be below the board
+on android vertical: the section should be to the right of the board.
+on windows: the section should be to the right of the board.
+
+--make sure it is possible to add boards to this section and 
+that they will resize themselves, due to the smaller size.
+
+--create a parameter class that can be passed to a ArimaaGameService. 
+the first parameter to add will tell the board how big it should be. (outer board size).
+the second parameter to add, will add a button that asks for analysis.
+
+
+
+
+2025-11-24
 
 On the board, pieces can now 
 be dragged and dropped to any vanct square.
