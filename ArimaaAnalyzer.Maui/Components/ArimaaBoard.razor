@@ -13,7 +13,8 @@
                 // With 0-based indices, columns A..H -> 0..7, rows top(8)..bottom(1) -> 0..7
                 // So C3 -> (row 5, col 2), F3 -> (5,5), C6 -> (2,2), F6 -> (2,5)
                 var isDark = (r == 2 || r == 5) && (c == 2 || c == 5);
-                <div class="square @(isDark ? "dark" : "light")"
+                var isSelected = _selectedPos == pos;
+                <div class="square @(isDark ? "dark" : "light") @(isSelected ? "selected" : "")"
                      @onpointerup="() => OnPointerUp(pos)">
                     @if (piece is not null)
                     {
@@ -34,7 +35,7 @@
     [Parameter]
     public BoardBehavior Behavior { get; set; } = BoardBehavior.Playable;
 
-    private Position? _dragFrom;
+    private Position? _selectedPos;
 
     private void OnDragStart(Position from)
     {
@@ -43,17 +44,24 @@
         // Only start a drag if there's a piece on the square
         if (Game.State.GetPiece(from) is not null)
         {
-            _dragFrom = from;
+            _selectedPos = from;
         }
     }
 
     private void OnPointerUp(Position target)
     {
-        if (_dragFrom is { } from)
+        if (_selectedPos is { } from)
         {
+            // If the source and target are the same, it's a selection (or a drag-release captured by source).
+            // We keep the selection so the user can tap the destination next.
+            if (from == target)
+            {
+                return;
+            }
+
             // Attempt the move using the simplified rules
             Game.TryMove(from, target);
         }
-        _dragFrom = null;
+        _selectedPos = null;
     }
 }
