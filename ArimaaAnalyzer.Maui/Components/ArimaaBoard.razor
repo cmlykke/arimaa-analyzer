@@ -3,7 +3,6 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
-@inject ArimaaGameService Game
 @inject IJSRuntime JS
 
 <div class="board-outer">
@@ -75,6 +74,10 @@
 @code {
     [Parameter]
     public BoardBehavior Behavior { get; set; } = BoardBehavior.Playable;
+
+    [Parameter]
+    [EditorRequired]
+    public ArimaaGameService Game { get; set; } = default!;
 
     private Position? _selectedPos;
 

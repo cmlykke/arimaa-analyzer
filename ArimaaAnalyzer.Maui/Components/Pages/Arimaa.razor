@@ -1,5 +1,17 @@
 ﻿@page "/arimaa"
+@using ArimaaAnalyzer.Maui.Services.Arimaa
 
 <h1>Arimaa Board</h1>
 
-<ArimaaBoard />
+<div style="margin-bottom: 8px;">
+    <button @onclick="() => DemoGame.ShowOuterUi = !DemoGame.ShowOuterUi">
+        Toggle Outer UI (@(DemoGame.ShowOuterUi ? "On" : "Off"))
+    </button>
+</div>
+
+<ArimaaBoard Game="DemoGame" />
+
+@code {
+    // Dummy game service for manual testing. Internally uses GameState's demo setup.
+    private ArimaaGameService DemoGame { get; } = new();
+}
