@@ -1,5 +1,6 @@
 ﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
 @inject ArimaaGameService Game
+@inject IJSRuntime JS
 
 <div class="board">
     @for (var r = 0; r < 8; r++)
@@ -15,7 +16,9 @@
                 var isDark = (r == 2 || r == 5) && (c == 2 || c == 5);
                 var isSelected = _selectedPos == pos;
                 <div class="square @(isDark ? "dark" : "light") @(isSelected ? "selected" : "")"
-                     @onpointerup="() => OnPointerUp(pos)">
+                     data-row="@r"
+                     data-col="@c"
+                     @onpointerup="async (e) => await OnPointerUp(e)">
                     @if (piece is not null)
                     {
                         <img src="@($"pieces/{piece.SvgFileName}")"
@@ -23,8 +26,8 @@
                              draggable="false"
                              title="@(Behavior.IsInteractive ? "Drag to move" : "")"
                              @onpointerdown="() => OnDragStart(pos)"
-                             />
-                }
+                        />
+                    }
                 </div>
             }
         </div>
@@ -48,19 +51,30 @@
         }
     }
 
-    private void OnPointerUp(Position target)
+    
+    private async Task OnPointerUp(PointerEventArgs e)
     {
         if (_selectedPos is { } from)
         {
-            // If the source and target are the same, it's a selection (or a drag-release captured by source).
-            // We keep the selection so the user can tap the destination next.
-            if (from == target)
-            {
-                return;
-            }
+            // Use JS to find the actual square under the pointer.
+            // This works for both Windows (normal events) and Android (captured events).
+            var coords = await JS.InvokeAsync<int[]?>("getBoardSquare", e.ClientX, e.ClientY);
 
-            // Attempt the move using the simplified rules
-            Game.TryMove(from, target);
+            if (coords is not null && coords.Length == 2)
+            {
+                var target = new Position(coords[0], coords[1]);
+
+                // If we released on the same square we started/selected:
+                // It's either a Tap (select) or a "move to self".
+                // We keep the selection active so the user can tap a destination next.
+                if (from == target)
+                {
+                    return;
+                }
+
+                // Otherwise, it's a Drag-and-Drop or the second step of a Tap-Tap
+                Game.TryMove(from, target);
+            }
         }
         _selectedPos = null;
     }

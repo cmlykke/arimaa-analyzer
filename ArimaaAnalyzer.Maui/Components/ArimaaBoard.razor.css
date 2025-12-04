@@ -1,6 +1,8 @@
 ﻿.board {
   display: inline-block;
   border: 2px solid #333;
+  /* Prevents the browser from interpreting touch gestures (like scrolling) within the board */
+  touch-action: none;
 }
 
 .rank {

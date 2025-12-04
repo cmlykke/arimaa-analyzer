@@ -25,6 +25,19 @@
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
 
+
+    <script>
+        window.getBoardSquare = (x, y) => {
+            const el = document.elementFromPoint(x, y);
+            if (!el) return null;
+            // Find the closest parent that is a square
+            const square = el.closest('.square');
+            if (square && square.dataset.row !== undefined && square.dataset.col !== undefined) {
+                return [parseInt(square.dataset.row), parseInt(square.dataset.col)];
+            }
+            return null;
+        };
+    </script>
 </body>
 
 </html>
