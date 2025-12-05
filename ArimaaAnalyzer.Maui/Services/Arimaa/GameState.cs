@@ -7,6 +7,8 @@ public sealed class GameState
     // 8x8 board (Arimaa is 8x8). Null means empty square.
     private readonly Piece?[,] _board = new Piece?[8, 8];
 
+    public string localAeiSetPosition { get; }
+    
     public Side SideToMove { get; }
 
     /// <summary>
@@ -17,6 +19,8 @@ public sealed class GameState
     /// </summary>
     public GameState(string aeiSetPosition)
     {
+        localAeiSetPosition = aeiSetPosition;
+        
         if (string.IsNullOrWhiteSpace(aeiSetPosition))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(aeiSetPosition));
 
