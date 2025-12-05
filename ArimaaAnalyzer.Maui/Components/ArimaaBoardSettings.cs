@@ -4,10 +4,11 @@ namespace ArimaaAnalyzer.Maui.Components;
 
 public sealed class ArimaaBoardSettings
 {
-    public double SquareSizePx { get; init; } = 56; // maps to --square-size
-    public double PieceSizePx { get; init; } = 44;  // maps to --piece-size
-    public bool ShowOuterUi { get; init; } = false;
-    public BoardBehavior Behavior { get; init; } = BoardBehavior.Playable;
+    // Make properties mutable so pages can toggle settings at runtime (e.g., ShowOuterUi)
+    public double SquareSizePx { get; set; } = 56; // maps to --square-size
+    public double PieceSizePx { get; set; } = 44;  // maps to --piece-size
+    public bool ShowOuterUi { get; set; } = false;
+    public BoardBehavior Behavior { get; set; } = BoardBehavior.Playable;
 
     // Presets
     public static ArimaaBoardSettings PlayableSmall => new()
