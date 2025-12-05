@@ -1,4 +1,9 @@
 ﻿@inherits LayoutComponentBase
+@using ArimaaAnalyzer.Maui.Components
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Nav
+@implements IDisposable
 
 <div class="page">
     <NavMenu/>
@@ -7,11 +12,51 @@
         <div class="top-row px-4">
             <!-- Burger trigger placed in the global top bar to ensure visibility on Android/iOS -->
             <label for="nav-toggle" class="burger-button" title="Open menu" aria-label="Open navigation menu"></label>
+            @if (IsOnArimaaPage)
+            {
+                <button class="toggle-outer-ui" @onclick="ToggleOuterUi">
+                    Toggle Outer UI (@(_sharedSettings.ShowOuterUi ? "On" : "Off"))
+                </button>
+            }
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
         <article class="content px-4">
-            @Body
+            <CascadingValue Value="_sharedSettings">
+                @Body
+            </CascadingValue>
         </article>
     </main>
 </div>
+
+@code {
+    private readonly ArimaaBoardSettings _sharedSettings = ArimaaBoardSettings.PlayableLarge;
+
+    private bool IsOnArimaaPage =>
+        Nav is not null &&
+        Uri.TryCreate(Nav.Uri, UriKind.Absolute, out var uri) &&
+        string.Equals(uri.AbsolutePath.TrimEnd('/'), "/arimaa", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Re-render so the conditional button shows/hides when navigating
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleOuterUi()
+    {
+        _sharedSettings.ShowOuterUi = !_sharedSettings.ShowOuterUi;
+        // Components reading this setting will update on next render
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+}

@@ -1,13 +1,7 @@
 ﻿@page "/arimaa"
 @using ArimaaAnalyzer.Maui.Services.Arimaa
-
-<h1>Arimaa Board</h1>
-
-<div style="margin-bottom: 8px;">
-    <button @onclick="ToggleOuterUi">
-        Toggle Outer UI (@(PageBoardSettings.ShowOuterUi ? "On" : "Off"))
-    </button>
-</div>
+@using ArimaaAnalyzer.Maui.Components
+@using Microsoft.AspNetCore.Components
 
 <ArimaaBoard Game="DemoGame" BoardSettings="PageBoardSettings" />
 
@@ -39,11 +33,8 @@
         return new ArimaaGameService(state);
     }
 
-    // Example: choose a preset for this page; other pages can pass different settings
-    private ArimaaBoardSettings PageBoardSettings { get; } = ArimaaBoardSettings.PlayableLarge;
-
-    private void ToggleOuterUi()
-    {
-        PageBoardSettings.ShowOuterUi = !PageBoardSettings.ShowOuterUi;
-    }
+    // Board settings are provided by MainLayout via CascadingValue, so
+    // this page consumes them without owning the instance.
+    [CascadingParameter]
+    private ArimaaBoardSettings PageBoardSettings { get; set; } = default!;
 }
