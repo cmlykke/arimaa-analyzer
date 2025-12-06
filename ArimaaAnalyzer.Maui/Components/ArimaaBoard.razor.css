@@ -1,8 +1,8 @@
 ﻿
 .board-outer {
   --outer-size: 448px;
-  /* Prefer target size but never exceed container. Height auto so content defines height. */
-  width: min(var(--outer-size), 100%);
+  /* Add calc for vertical cap; adjust the subtracted value if needed based on exact measurements of headers/paddings/safe areas */
+  width: min(var(--outer-size), 100%, calc(100vh - env(safe-area-inset-top) - 4.5rem));
   height: auto;
 
   /* Absolute hard stops */
