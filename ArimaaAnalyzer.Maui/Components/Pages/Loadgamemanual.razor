@@ -1,35 +1,53 @@
 ﻿@page "/loadgamemanual"
+@using YourApp.Models
 
 
     <p>Page to load games manually from Arimaa.com</p>
     <div class="mb-3">
         <label for="gameNotation" class="form-label">Enter Arimaa game notation:</label>
-        <div class="input-group">
-            <textarea id="gameNotation" class="form-control" rows="15" @bind="GameNotation" placeholder="Paste the full game notation here..."></textarea>
-        </div>
+        <textarea id="gameNotation" class="form-control" rows="15" @bind="GameNotation"
+                  placeholder="Paste the full game notation here..."></textarea>
     </div>
-    
+
     <div class="mb-3">
         <button class="btn btn-primary" @onclick="LoadGame">Load Game</button>
     </div>
-    
+
+    @if (ErrorMessage != null)
+    {
+        <div class="alert alert-danger">@ErrorMessage</div>
+    }
+
     @if (LoadedGame != null)
     {
-    <h5>Loaded Game:</h5>
-    <pre class="border p-3 bg-light">@LoadedGame</pre>
+        <h5>Loaded Game (@LoadedGame.Moves.Count moves):</h5>
+        <pre class="border p-3 bg-light" style="max-height: 500px; overflow-y: auto;">@LoadedGame.RawNotation</pre>
     }
 
 @code {
     private string? GameNotation { get; set; }
-    private string? LoadedGame { get; set; }
+    private ArimaaGameService? LoadedGame { get; set; }
+    private string? ErrorMessage { get; set; }
 
     private void LoadGame()
     {
-        // Basic trimming - you can add validation later if needed
-        LoadedGame = GameNotation?.Trim();
-        
-        // Optional: Clear the input after loading
-        // GameNotation = string.Empty;
+        ErrorMessage = null;
+        LoadedGame = null;
+
+        if (string.IsNullOrWhiteSpace(GameNotation))
+        {
+            ErrorMessage = "Please enter game notation.";
+            return;
+        }
+
+        if (ArimaaGameService.TryParse(GameNotation, out var game, out var error))
+        {
+            LoadedGame = game;
+        }
+        else
+        {
+            ErrorMessage = $"Invalid game: {error}";
+        }
     }
 
 }

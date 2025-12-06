@@ -1,4 +1,31 @@
 ﻿
+
+
+2025-12-06
+
+- A utility translation service must be created
+it must be calculate this:
+* all the "GameState"string from "graphic board" (make sure to replace the ones already made)
+* calculate "GameState"string from game history 
+
+- ArimaaGameService should be split into a service and a ArimaaGameModel
+- A Model host hold this data:
+metadata about the game
+a grow-able tree structure with nodes.
+each node must have this:
+* a game move that shows how the game "got to this place"
+* a calculated GameState object, based on the sibling move and the previus moves
+* an enum that shows if the state is 
+A: a cannonical move from a loaded game
+B: a user attempted move
+C: an AI calculated move
+- The ArimaaGameService should be able to do this:
+* verify a new game copy pasted into the field.
+* calculate a finished ArimaaGameModel object from the game
+this means it also has to be able to calculate a gameState string from a game history.
+
+- a ArimmaBoard should be able to take either a single GameState or a ArimaaGameModel obejct
+
 2025-12-04
 
 ||||--to be done to improve move validation
