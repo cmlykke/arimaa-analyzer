@@ -1,9 +1,15 @@
 ﻿
 .board-outer {
+  /* Outer container sizing */
   --outer-size: 448px;
-  /* Add calc for vertical cap; adjust the subtracted value if needed based on exact measurements of headers/paddings/safe areas */
   width: min(var(--outer-size), 100%, calc(100vh - env(safe-area-inset-top) - 4.5rem));
   height: auto;
+
+  /* Compact outer-UI variables (scoped to board) */
+  --outer-gap: 4px;
+  --outer-font-size: 0.85rem;
+  --outer-btn-pad: 2px 6px;
+  --outer-icon-ch: 1.9ch;
 
   /* Absolute hard stops */
   max-width: 100%;
@@ -19,7 +25,7 @@
 .outer-top,
 .outer-bottom {
   display: flex;
-  gap: 8px;
+  gap: var(--outer-gap);
   align-items: center;
   justify-content: center;
   margin: 4px 0;
@@ -30,7 +36,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--outer-gap);
   /* Allow the center band to shrink when vertical space is tight */
   min-height: 0;
 }
@@ -39,11 +45,29 @@
 .outer-right {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--outer-gap);
 }
 
-.outer-btn { padding: 4px 8px; }
-.outer-caption { font-size: 0.9rem; color: #555; }
+.outer-btn {
+  padding: var(--outer-btn-pad);
+  font-size: var(--outer-font-size);
+  line-height: 1.1;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #f7f7f7;
+}
+
+/* Compact ASCII-icon look */
+.outer-icon {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  letter-spacing: 0.2px;
+  min-width: var(--outer-icon-ch);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.outer-caption { font-size: 0.8rem; color: #555; }
 
 /* Inner board should scale to whatever space is left inside the fixed outer container. */
 .board-inner {
@@ -86,10 +110,6 @@
 
 .square.light { background: #f0d9b5; }
 .square.dark { background: #b58863; }
-/*
-.square.light { background: #ADD8E6; }
-.square.dark { background: #F08080; }
-*/
 .square.selected {
   outline: 3px solid #ffbf00;
 }
