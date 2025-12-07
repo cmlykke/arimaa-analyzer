@@ -167,11 +167,11 @@ public class NotationServiceTests
         var test = "";
     }
     
-    [Fact(DisplayName = "NotationService test that an arimaa game can be converted to a list of tupples")]
+    [Fact(DisplayName = "NotationService test that an arimaa game can be converted to a list of turns")]
     public void ConvertGameNotationToListOfTupples_mixedBoard()
     {
         // before: base position, gold to move
-        List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
+        List<GameTurn> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
 
         singleString.Count.Should().Be(81);
         
@@ -186,7 +186,7 @@ public class NotationServiceTests
     public void ConvertGameArrayAndIndexToAEI_mixedBoard()
     {
         // before: base position, gold to move
-        List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
+        List<GameTurn> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
 
         var aeiFromTurn_0 = NotationService.GameToAeiAtTurn(singleString, 0);
         aeiFromTurn_0.Should().Be("setposition b \"RCRDRRRRHMREDCHR                                                \"");

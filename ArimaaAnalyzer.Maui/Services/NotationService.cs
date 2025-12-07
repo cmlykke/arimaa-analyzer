@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using ArimaaAnalyzer.Maui.Services.Arimaa;
+using YourApp.Models;
 
 namespace ArimaaAnalyzer.Maui.Services;
 
@@ -18,7 +19,7 @@ public static class NotationService
     /// </param>
     /// <returns>The AEI string (setposition ...) for the position after the specified turn.</returns>
     public static string GameToAeiAtTurn(
-        List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> turns,
+        List<GameTurn> turns,
         int upToTurnIndex = -1)
     {
         if (turns == null) throw new ArgumentNullException(nameof(turns));
@@ -67,9 +68,9 @@ public static class NotationService
     /// </summary>
     /// <param name="gameText">The full game notation text.</param>
     /// <returns>List of turns with move number, side, and moves.</returns>
-    public static List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> ExtractTurnsWithMoves(string gameText)
+    public static List<GameTurn> ExtractTurnsWithMoves(string gameText)
     {
-        var turns = new List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)>();
+        var turns = new List<GameTurn>();
 
         if (string.IsNullOrWhiteSpace(gameText))
             return turns;
@@ -102,7 +103,7 @@ public static class NotationService
 
             if (string.IsNullOrWhiteSpace(movesPart))
             {
-                turns.Add((moveNumber, side, Array.Empty<string>()));
+                turns.Add(new GameTurn(moveNumber, side, Array.Empty<string>()));
                 continue;
             }
 
@@ -112,7 +113,7 @@ public static class NotationService
                 .Where(m => !string.IsNullOrEmpty(m))
                 .ToArray();
 
-            turns.Add((moveNumber, side, individualMoves));
+            turns.Add(new GameTurn(moveNumber, side, individualMoves));
         }
 
         return turns;
