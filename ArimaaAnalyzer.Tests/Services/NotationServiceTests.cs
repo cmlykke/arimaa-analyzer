@@ -181,4 +181,25 @@ public class NotationServiceTests
 
         var test = "";
     }
+    
+    [Fact(DisplayName = "NotationService test that a AEI string can be generated")]
+    public void ConvertGameArrayAndIndexToAEI_mixedBoard()
+    {
+        // before: base position, gold to move
+        List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
+
+        var aeiFromTurn_0 = NotationService.GameToAeiAtTurn(singleString, 0);
+        aeiFromTurn_0.Should().Be("setposition b \"RCRDRRRRHMREDCHR                                                \"");
+        
+        var aeiFromTurn_1 = NotationService.GameToAeiAtTurn(singleString, 1);
+        aeiFromTurn_1.Should().Be("setposition g \"RCRDRRRRHMREDCHR                                rhchecmdrrrrdrrr\"");
+        
+        var aeiFromTurn_2 = NotationService.GameToAeiAtTurn(singleString, 2);
+        aeiFromTurn_2.Should().Be("setposition b \"RMRERRRRH REDCHR   E                            rhchecmdrrrrdrrr\"");
+
+        var aeiFromTurn_80 = NotationService.GameToAeiAtTurn(singleString, 80);
+        aeiFromTurn_80.Should().Be("setposition b \"  RR  HRH RR H RHCRR H   e Rhhr heC R   R D R h  Red   hrr Rh Hh\"");
+
+        var test = "";
+    }
 }

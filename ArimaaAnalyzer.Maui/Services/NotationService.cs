@@ -6,6 +6,60 @@ namespace ArimaaAnalyzer.Maui.Services;
 
 public static class NotationService
 {
+        
+    /// <summary>
+    /// Converts a parsed Arimaa game up to a specific turn into an AEI position string.
+    /// </summary>
+    /// <param name="turns">The list of parsed turns from ExtractTurnsWithMoves</param>
+    /// <param name="upToTurnIndex">
+    /// The 0-based index in the turns list. 
+    /// -1 means the final position (all turns applied).
+    /// Any valid index applies moves up to and including that turn.
+    /// </param>
+    /// <returns>The AEI string (setposition ...) for the position after the specified turn.</returns>
+    public static string GameToAeiAtTurn(
+        List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> turns,
+        int upToTurnIndex = -1)
+    {
+        if (turns == null) throw new ArgumentNullException(nameof(turns));
+
+        string[] board = InitializeEmptyBoard();
+        string sideToMove = "g"; // Gold always starts
+
+        int lastIndex = upToTurnIndex == -1 ? turns.Count - 1 : upToTurnIndex;
+        if (lastIndex < -1 || (turns.Count > 0 && lastIndex >= turns.Count))
+            throw new ArgumentOutOfRangeException(nameof(upToTurnIndex));
+
+        // If upToTurnIndex is -1 and turns is empty, return initial position
+        if (turns.Count == 0 || lastIndex < -1)
+            return BoardToAei(board, sideToMove);
+
+        // Apply moves up to and including the specified turn
+        for (int i = 0; i <= lastIndex; i++)
+        {
+            var turn = turns[i];
+            string moveSide = turn.Side == "w" ? "g" : "b";
+
+            // Optional safety: ensure turns are in expected order (alternating sides)
+            // You can remove this check if you're confident in the input
+            if (moveSide != sideToMove)
+            {
+                // In rare malformed games, you might want to force it or skip
+                // Here we just proceed with the turn's side
+                sideToMove = moveSide;
+            }
+
+            foreach (var move in turn.Moves)
+            {
+                ApplyMove(ref board, move, moveSide);
+            }
+
+            // Switch side for next turn
+            sideToMove = sideToMove == "g" ? "b" : "g";
+        }
+
+        return BoardToAei(board, sideToMove);
+    }
     
     /// <summary>
     /// Parses an Arimaa game text and returns a list of turns, each containing
