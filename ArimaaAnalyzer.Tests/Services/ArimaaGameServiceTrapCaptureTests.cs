@@ -1,4 +1,5 @@
-﻿using ArimaaAnalyzer.Maui.Services.Arimaa;
+﻿using ArimaaAnalyzer.Maui.Services;
+using ArimaaAnalyzer.Maui.Services.Arimaa;
 using FluentAssertions;
 using Xunit;
 
@@ -6,11 +7,6 @@ namespace ArimaaAnalyzer.Tests.Services;
 
 public class ArimaaGameServiceTrapCaptureTests
 {
-    private static string BoardToAei(string[] b, string side)
-    {
-        var flat = string.Join(string.Empty, System.Array.ConvertAll(b, r => r.Replace('.', ' ')));
-        return $"setposition {side} \"{flat}\"";
-    }
 
     private static string[] EmptyBoard() => new[]
     {
@@ -32,7 +28,7 @@ public class ArimaaGameServiceTrapCaptureTests
         // Place silver rabbit at c7 -> (row1,col2)
         board[1] = ReplaceChar(board[1], 2, 'r');
 
-        var state = new GameState(BoardToAei(board, "s"));
+        var state = new GameState(NotationService.BoardToAei(board, "s"));
         var game = new ArimaaGameService(state);
 
         var from = new Position(1, 2); // c7
@@ -54,7 +50,7 @@ public class ArimaaGameServiceTrapCaptureTests
         // Silver dog at d6 (row2,col3) provides support
         board[2] = ReplaceChar(board[2], 3, 'd');
 
-        var state = new GameState(BoardToAei(board, "s"));
+        var state = new GameState(NotationService.BoardToAei(board, "s"));
         var game = new ArimaaGameService(state);
 
         var from = new Position(1, 2); // c7
@@ -76,7 +72,7 @@ public class ArimaaGameServiceTrapCaptureTests
         // Silver dog at d6 (row2,col3) provides support initially
         board[2] = ReplaceChar(board[2], 3, 'd');
 
-        var state = new GameState(BoardToAei(board, "s"));
+        var state = new GameState(NotationService.BoardToAei(board, "s"));
         var game = new ArimaaGameService(state);
 
         // Move the supporting dog away: d6 -> d7 (row1,col3)

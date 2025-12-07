@@ -56,14 +56,6 @@ public class AnalysisServiceTests
             return;
         }
 
-        static string BoardToAei(string[] board, string side)
-        {
-            // Replace dots with spaces and concatenate rows
-            var flat = string.Join(string.Empty, 
-                Array.ConvertAll(board, r => r.Replace('.', ' ')));
-            return $"setposition {side} \"{flat}\"";
-        }
-
         await using var svc = new AnalysisService();
         try
         {
@@ -91,7 +83,7 @@ public class AnalysisServiceTests
             };
 
             // Send setposition in the exact format Sharp expects
-            await svc.SendAsync(BoardToAei(board, "g"));
+            await svc.SendAsync(NotationService.BoardToAei(board, "g"));
 
             // Ready check after setting position
             await svc.IsReadyAsync();

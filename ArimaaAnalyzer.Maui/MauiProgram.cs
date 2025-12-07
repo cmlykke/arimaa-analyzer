@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ArimaaAnalyzer.Maui.Services;
+using Microsoft.Extensions.Logging;
 using ArimaaAnalyzer.Maui.Services.Arimaa;
 
 namespace ArimaaAnalyzer.Maui;
@@ -31,13 +32,7 @@ public static class MauiProgram
                 "RRRRRRRR"
             };
 
-            static string BoardToAei(string[] b, string side)
-            {
-                var flat = string.Join(string.Empty, Array.ConvertAll(b, r => r.Replace('.', ' ')));
-                return $"setposition {side} \"{flat}\"";
-            }
-
-            var aei = BoardToAei(board, "g");
+            var aei = NotationService.BoardToAei(board, "g");
             var state = new GameState(aei);
             return new ArimaaGameService(state);
         });
