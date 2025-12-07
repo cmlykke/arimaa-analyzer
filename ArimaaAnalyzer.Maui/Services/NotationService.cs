@@ -7,6 +7,64 @@ namespace ArimaaAnalyzer.Maui.Services;
 public static class NotationService
 {
     
+    /// <summary>
+    /// Parses an Arimaa game text and returns a list of turns, each containing
+    /// the move number, side ('w' or 'b'), and the list of individual moves in that turn.
+    /// </summary>
+    /// <param name="gameText">The full game notation text.</param>
+    /// <returns>List of turns with move number, side, and moves.</returns>
+    public static List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> ExtractTurnsWithMoves(string gameText)
+    {
+        var turns = new List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)>();
+
+        if (string.IsNullOrWhiteSpace(gameText))
+            return turns;
+
+        // Step 1: Replace literal "\n" (the text) with actual newline characters
+        // This handles cases where the text contains "\n" as part of the string
+        string textWithRealNewlines = gameText.Replace("\\n", "\n");
+
+        // Step 2: Normalize all line endings (\r\n -> \n, lone \r -> \n)
+        textWithRealNewlines = textWithRealNewlines.Replace("\r\n", "\n").Replace("\r", "\n");
+
+        // Step 3: Now split on real newlines
+        var lines = textWithRealNewlines
+            .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrWhiteSpace(l));
+
+        // Step 4: Parse each line normally
+        var regex = new Regex(@"^(\d+)([wb])\s+(.*)$", RegexOptions.Compiled);
+
+        foreach (var line in lines)
+        {
+            var match = regex.Match(line);
+            if (!match.Success)
+                continue;
+
+            string moveNumber = match.Groups[1].Value;
+            string side = match.Groups[2].Value;
+            string movesPart = match.Groups[3].Value.Trim();
+
+            if (string.IsNullOrWhiteSpace(movesPart))
+            {
+                turns.Add((moveNumber, side, Array.Empty<string>()));
+                continue;
+            }
+
+            var individualMoves = movesPart
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(m => m.Trim())
+                .Where(m => !string.IsNullOrEmpty(m))
+                .ToArray();
+
+            turns.Add((moveNumber, side, individualMoves));
+        }
+
+        return turns;
+    }
+    
+    
     public static string GameToAei(string gameText)
     {
         string[] board = InitializeEmptyBoard();

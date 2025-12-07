@@ -166,4 +166,19 @@ public class NotationServiceTests
 
         var test = "";
     }
+    
+    [Fact(DisplayName = "NotationService test that an arimaa game can be converted to a list of tupples")]
+    public void ConvertGameNotationToListOfTupples_mixedBoard()
+    {
+        // before: base position, gold to move
+        List<(string MoveNumber, string Side, IReadOnlyList<string> Moves)> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
+
+        singleString.Count.Should().Be(81);
+        
+        singleString[4].MoveNumber.ToString().Should().Be("3");
+        singleString[4].Side.Should().Be("w");
+        singleString[4].Moves[0].Should().Be("Ed5w");
+
+        var test = "";
+    }
 }
