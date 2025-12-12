@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using ArimaaAnalyzer.Maui.Services;
 
 namespace YourApp.Models;
 
@@ -17,7 +18,7 @@ public class GameTurn
     /// <summary>
     /// Side that played this turn: "w" (gold/white) or "b" (silver/black).
     /// </summary>
-    public string Side { get; }
+    public Sides Side { get; }
 
     /// <summary>
     /// The list of individual moves composing this turn.
@@ -29,6 +30,8 @@ public class GameTurn
     /// </summary>
     public bool IsMainLine { get; }
 
+    public string AEIstring { get; }
+    
     /// <summary>
     /// Child turns representing continuations/variations from this position.
     /// The first child can be considered the main line; additional children are alternatives.
@@ -40,12 +43,15 @@ public class GameTurn
     /// </summary>
     public GameTurn? Parent { get; private set; }
 
-    public GameTurn(string MoveNumber, string Side, IReadOnlyList<string> Moves, bool isMainLine = true)
+    public GameTurn(string MoveNumber, Sides Side, IReadOnlyList<string> Moves, bool isMainLine = true)
     {
         this.MoveNumber = MoveNumber;
         this.Side = Side;
         this.Moves = Moves ?? new ReadOnlyCollection<string>(new List<string>());
         this.IsMainLine = isMainLine;
+        this.AEIstring =
+            NotationService.GamePlusMovesToAei(
+                NotationService.BoardToAei(NotationService.InitializeEmptyBoard(), Side), Moves);
     }
 
     /// <summary>

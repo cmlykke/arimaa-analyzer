@@ -187,7 +187,7 @@ public class NotationServiceTests
         main.Count.Should().Be(81);
         
         main[4].MoveNumber.ToString().Should().Be("3");
-        main[4].Side.Should().Be("w");
+        main[4].Side.Should().Be(Sides.Gold);
         main[4].Moves[0].Should().Be("Ed5w");
 
         var test = "";
@@ -211,6 +211,28 @@ public class NotationServiceTests
 
         var aeiFromTurn_80 = NotationService.GameToAeiAtTurn(root!, 80);
         aeiFromTurn_80.Should().Be("setposition s \"  RR  HRH RR H RHCRR H   e Rhhr heC R   R D R h  Red   hrr Rh Hh\"");
+
+        var test = "";
+    }
+    
+    [Fact(DisplayName = "NotationService test that a AEI string can be generated")]
+    public void ConvertGameArrayAndIndexToAEI_mixedBoard_testInternalAEIstr()
+    {
+        // before: base position, gold to move
+        GameTurn? root = NotationService.ExtractTurnsWithMoves(Game_base);
+        root.Should().NotBeNull();
+
+        var aeiFromTurn_0 = root.Children.First().AEIstring;
+        aeiFromTurn_0.Should().Be("setposition s \"RCRDRRRRHMREDCHR                                                \"");
+        
+        var aeiFromTurn_1 = root.Children.First().Children.First().AEIstring;
+        aeiFromTurn_1.Should().Be("setposition g \"RCRDRRRRHMREDCHR                                rhchecmdrrrrdrrr\"");
+        
+        var aeiFromTurn_2 = root.Children.First().Children.First().Children.First().AEIstring;
+        aeiFromTurn_2.Should().Be("setposition s \"RMRERRRRH REDCHR   E                            rhchecmdrrrrdrrr\"");
+
+        //var aeiFromTurn_80 = NotationService.GameToAeiAtTurn(root!, 80);
+        //aeiFromTurn_80.Should().Be("setposition s \"  RR  HRH RR H RHCRR H   e Rhhr heC R   R D R h  Red   hrr Rh Hh\"");
 
         var test = "";
     }

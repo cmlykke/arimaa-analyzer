@@ -9,6 +9,51 @@ public static class NotationService
 {
         
     /// <summary>
+    /// Applies a list of moves to an existing AEI position and returns the new AEI string.
+    /// Assumes the moves constitute a complete turn for the current side to move.
+    /// </summary>
+    /// <param name="aei">The starting AEI position string (e.g., "setposition g \"...\"").</param>
+    /// <param name="moves">The list of moves to apply.</param>
+    /// <returns>The new AEI string after applying the moves and switching sides.</returns>
+    public static string GamePlusMovesToAei(string aei, IReadOnlyList<string> moves)
+    {
+        if (string.IsNullOrWhiteSpace(aei)) throw new ArgumentNullException(nameof(aei));
+        if (moves == null) throw new ArgumentNullException(nameof(moves));
+
+        // Extract side to move from AEI
+        int setPosIndex = aei.IndexOf("setposition", StringComparison.OrdinalIgnoreCase);
+        if (setPosIndex == -1) throw new ArgumentException("Invalid AEI format: missing 'setposition'.");
+        
+        string afterSetPos = aei.Substring(setPosIndex + "setposition".Length).Trim();
+        int quoteIndex = afterSetPos.IndexOf('"');
+        if (quoteIndex == -1) throw new ArgumentException("Invalid AEI format: missing quote.");
+        
+        string sideCode = afterSetPos.Substring(0, quoteIndex).Trim();
+        Sides sideToMove = sideCode switch
+        {
+            "g" => Sides.Gold,
+            "s" => Sides.Silver,
+            _ => throw new ArgumentException($"Invalid side code in AEI: {sideCode}")
+        };
+
+        // Get the board
+        string[] board = AeiToBoard(aei);
+
+        // Apply each move
+        foreach (var move in moves)
+        {
+            ApplyMove(ref board, move, sideToMove);
+        }
+
+        // Switch side after the turn
+        sideToMove = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+
+        // Return new AEI
+        return BoardToAei(board, sideToMove);
+    }
+
+    
+    /// <summary>
     /// Converts a parsed Arimaa game up to a specific turn into an AEI position string.
     /// </summary>
     /// <param name="root">The root (first node) of the parsed main-line turn tree from ExtractTurnsWithMoves</param>
@@ -48,7 +93,7 @@ public static class NotationService
         for (int i = 0; i <= lastIndex; i++)
         {
             var turn = mainLine[i];
-            Sides moveSide = turn.Side == "w" ? Sides.Gold : Sides.Silver;
+            Sides moveSide = turn.Side == Sides.Gold ? Sides.Gold : Sides.Silver;
 
             // Optional safety: ensure turns are in expected order (alternating sides)
             // You can remove this check if you're confident in the input
@@ -108,7 +153,15 @@ public static class NotationService
                 continue;
 
             string moveNumber = match.Groups[1].Value;
-            string side = match.Groups[2].Value;
+            string sideStr = match.Groups[2].Value;
+            Sides sideToMove = sideStr switch
+            {
+                "g" => Sides.Gold,
+                "w" => Sides.Gold,
+                "s" => Sides.Silver,
+                "b" => Sides.Silver,
+                _ => throw new ArgumentException($"Invalid side code in AEI: {sideStr}")
+            };
             string movesPart = match.Groups[3].Value.Trim();
 
             IReadOnlyList<string> individualMoves;
@@ -125,7 +178,7 @@ public static class NotationService
                     .ToArray();
             }
 
-            var node = new GameTurn(moveNumber, side, individualMoves, isMainLine: true);
+            var node = new GameTurn(moveNumber, sideToMove, individualMoves, isMainLine: true);
             if (root == null)
             {
                 root = node;
@@ -187,7 +240,7 @@ public static class NotationService
         return BoardToAei(board, sideToMove);
     }
 
-    private static string[] InitializeEmptyBoard()
+    public static string[] InitializeEmptyBoard()
     {
         return new[]
         {
