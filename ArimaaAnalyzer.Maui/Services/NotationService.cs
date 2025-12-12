@@ -4,55 +4,9 @@ using ArimaaAnalyzer.Maui.Services.Arimaa;
 using YourApp.Models;
 
 namespace ArimaaAnalyzer.Maui.Services;
-
 public static class NotationService
 {
         
-    /// <summary>
-    /// Applies a list of moves to an existing AEI position and returns the new AEI string.
-    /// Assumes the moves constitute a complete turn for the current side to move.
-    /// </summary>
-    /// <param name="aei">The starting AEI position string (e.g., "setposition g \"...\"").</param>
-    /// <param name="moves">The list of moves to apply.</param>
-    /// <returns>The new AEI string after applying the moves and switching sides.</returns>
-    public static string GamePlusMovesToAei(string aei, IReadOnlyList<string> moves)
-    {
-        if (string.IsNullOrWhiteSpace(aei)) throw new ArgumentNullException(nameof(aei));
-        if (moves == null) throw new ArgumentNullException(nameof(moves));
-
-        // Extract side to move from AEI
-        int setPosIndex = aei.IndexOf("setposition", StringComparison.OrdinalIgnoreCase);
-        if (setPosIndex == -1) throw new ArgumentException("Invalid AEI format: missing 'setposition'.");
-        
-        string afterSetPos = aei.Substring(setPosIndex + "setposition".Length).Trim();
-        int quoteIndex = afterSetPos.IndexOf('"');
-        if (quoteIndex == -1) throw new ArgumentException("Invalid AEI format: missing quote.");
-        
-        string sideCode = afterSetPos.Substring(0, quoteIndex).Trim();
-        Sides sideToMove = sideCode switch
-        {
-            "g" => Sides.Gold,
-            "s" => Sides.Silver,
-            _ => throw new ArgumentException($"Invalid side code in AEI: {sideCode}")
-        };
-
-        // Get the board
-        string[] board = AeiToBoard(aei);
-
-        // Apply each move
-        foreach (var move in moves)
-        {
-            ApplyMove(ref board, move, sideToMove);
-        }
-
-        // Switch side after the turn
-        sideToMove = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
-
-        // Return new AEI
-        return BoardToAei(board, sideToMove);
-    }
-
-    
     /// <summary>
     /// Converts a parsed Arimaa game up to a specific turn into an AEI position string.
     /// </summary>
@@ -146,6 +100,9 @@ public static class NotationService
         // Step 4: Parse each line normally
         var regex = new Regex(@"^(\d+)([wb])\s+(.*)$", RegexOptions.Compiled);
 
+        string currentAei = NotationService.BoardToAei(NotationService.InitializeEmptyBoard(), Sides.Gold);
+        root = new GameTurn(currentAei, "0", Sides.Silver, Array.Empty<string>(), isMainLine: true);
+        current = root;
         foreach (var line in lines)
         {
             var match = regex.Match(line);
@@ -178,17 +135,10 @@ public static class NotationService
                     .ToArray();
             }
 
-            var node = new GameTurn(moveNumber, sideToMove, individualMoves, isMainLine: true);
-            if (root == null)
-            {
-                root = node;
-                current = node;
-            }
-            else
-            {
-                current!.AddChild(node);
-                current = node;
-            }
+            var node = new GameTurn(currentAei, moveNumber, sideToMove, individualMoves, isMainLine: true);
+            currentAei = node.AEIstring;
+            current!.AddChild(node);
+            current = node;
         }
 
         return root;
@@ -270,8 +220,8 @@ public static class NotationService
             int col = char.ToLower(move[1]) - 'a';
             int row = move[2] - '1'; // '1' -> 0, '8' -> 7
 
-            char actualPiece = side == Sides.Gold ? char.ToUpper(piece) : char.ToLower(piece);
-            b[row, col] = actualPiece;
+            // Preserve the case of the piece from notation to determine color
+            b[row, col] = piece;
         }
         else if (move.Length >= 4)
         {
@@ -280,9 +230,7 @@ public static class NotationService
             int startCol = char.ToLower(move[1]) - 'a';
             int startRow = move[2] - '1';
             char dirChar = move[^1] == 'x' ? move[^2] : move[^1]; // direction is last or second-last if 'x'
-
-            char actualPiece = side == Sides.Gold ? char.ToUpper(piece) : char.ToLower(piece);
-
+            
             // Clear starting position
             b[startRow, startCol] = '.';
 
@@ -308,8 +256,8 @@ public static class NotationService
                 }
                 else
                 {
-                    // Normal step: move piece to target
-                    b[targetRow, targetCol] = actualPiece;
+                    // Normal step: move piece to target, preserving original case from notation
+                    b[targetRow, targetCol] = piece;
                 }
             }
         }
@@ -356,5 +304,116 @@ public static class NotationService
         }
 
         return board;
+    }
+
+    /// <summary>
+    /// Applies a list of moves to an existing AEI position and returns the new AEI string.
+    /// Assumes the moves constitute a complete turn for the current side to move.
+    /// </summary>
+    /// <param name="aei">The starting AEI position string (e.g., "setposition g \"...\"").</param>
+    /// <param name="moves">The list of moves to apply.</param>
+    /// <returns>The new AEI string after applying the moves and switching sides.</returns>
+    public static string GamePlusMovesToAei(string aei, IReadOnlyList<string> moves)
+    {
+        if (string.IsNullOrWhiteSpace(aei)) throw new ArgumentNullException(nameof(aei));
+        if (moves == null) throw new ArgumentNullException(nameof(moves));
+
+        // Extract side to move from AEI
+        int setPosIndex = aei.IndexOf("setposition", StringComparison.OrdinalIgnoreCase);
+        if (setPosIndex == -1) throw new ArgumentException("Invalid AEI format: missing 'setposition'.");
+        
+        string afterSetPos = aei.Substring(setPosIndex + "setposition".Length).Trim();
+        int spaceIndex = afterSetPos.IndexOf(' ');
+        if (spaceIndex == -1) spaceIndex = afterSetPos.IndexOf('"') - 1; // in case no space before "
+        string sideCode = afterSetPos.Substring(0, spaceIndex + 1).Trim();
+        Sides sideToMove = sideCode switch
+        {
+            "g" => Sides.Gold,
+            "s" => Sides.Silver,
+            _ => throw new ArgumentException($"Invalid side code in AEI: {sideCode}")
+        };
+
+        // Extract the flat string
+        int quoteStart = aei.IndexOf('"');
+        int quoteEnd = aei.LastIndexOf('"');
+        if (quoteStart == -1 || quoteEnd == -1 || quoteEnd <= quoteStart)
+            throw new ArgumentException("Invalid AEI format: missing quotes.");
+        string flat = aei.Substring(quoteStart + 1, quoteEnd - quoteStart - 1);
+
+        // Apply each move directly to the flat string
+        foreach (var move in moves)
+        {
+            flat = ApplyMoveToFlat(flat, move);
+        }
+
+        // Switch side after the turn
+        sideToMove = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+
+        // Return new AEI
+        return $"setposition {sideToMove.GetCode()} \"{flat}\"";
+    }
+
+    /// <summary>
+    /// Helper function to apply a single move directly to the flat AEI board string (with spaces for empties).
+    /// Returns the updated flat string.
+    /// Note: Directions corrected based on standard Arimaa notation ('n' increases row towards higher ranks).
+    /// Piece case preserved from notation (no forcing based on side).
+    /// </summary>
+    private static string ApplyMoveToFlat(string flat, string move)
+    {
+        if (flat.Length != 64) throw new ArgumentException("Flat board string must be 64 characters.");
+
+        char[] b = flat.ToCharArray(); // spaces for empty
+
+        if (move.Length == 3 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
+        {
+            // Setup move: e.g., "Ra1", "ra8"
+            char piece = move[0];
+            int col = char.ToLower(move[1]) - 'a';
+            int row = move[2] - '1'; // 0 for '1' (bottom), 7 for '8' (top)
+            if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
+
+            int index = row * 8 + col;
+            b[index] = piece;
+        }
+        else if (move.Length >= 4 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
+        {
+            // Regular move or removal: e.g., "Ed4n", "hb5s", "rc5x"
+            char piece = move[0];
+            int col = char.ToLower(move[1]) - 'a';
+            int row = move[2] - '1';
+            if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
+
+            int index = row * 8 + col;
+
+            // Clear starting position (for moves and removals)
+            b[index] = ' ';
+
+            if (!move.EndsWith('x'))
+            {
+                // Normal step: compute target and place piece there
+                char dirChar = move[^1];
+                int dr = 0, dc = 0;
+                switch (dirChar)
+                {
+                    case 'n': dr = 1; break; // north: higher row (towards rank 8)
+                    case 's': dr = -1; break; // south: lower row (towards rank 1)
+                    case 'e': dc = 1; break;
+                    case 'w': dc = -1; break;
+                }
+
+                int targetRow = row + dr;
+                int targetCol = col + dc;
+
+                if (targetRow >= 0 && targetRow < 8 && targetCol >= 0 && targetCol < 8)
+                {
+                    int targetIndex = targetRow * 8 + targetCol;
+                    b[targetIndex] = piece;
+                }
+            }
+            // If ends with 'x', it's a removal: already cleared the position, no further action
+        }
+
+        return new string(b);
     }
 }

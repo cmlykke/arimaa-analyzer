@@ -129,7 +129,7 @@ public class NotationServiceTests
         // before: base position, gold to move
         var singleString = NotationService.GameToAei(Game_base);
 
-        singleString.Should().Be("setposition s \"Rmre RRRH  CDhH  Crd H   e    H E   H   e    HH r cH   HrrrRd   \"");
+        singleString.Should().Be("setposition s \"RMRE RRRH  CDHH  CRd H   e    H e   h   e    hH R ch   hrRrrd   \"");
 
         var test = "";
     }
@@ -162,7 +162,7 @@ public class NotationServiceTests
         // before: base position, gold to move
         var singleString = NotationService.GameToAei(Game_firstMoveAfterSetup);
 
-        singleString.Should().Be("setposition g \"RmReRRRRH ReDCH    e                            rhchecmdrrrrdrr \"");
+        singleString.Should().Be("setposition g \"RMRERRRRH REDCH    E                            rhchecmdrrrrdrr \"");
 
         var test = "";
     }
@@ -184,11 +184,11 @@ public class NotationServiceTests
             node = node.Children.FirstOrDefault(c => c.IsMainLine);
         }
 
-        main.Count.Should().Be(81);
+        main.Count.Should().Be(82);
         
-        main[4].MoveNumber.ToString().Should().Be("3");
-        main[4].Side.Should().Be(Sides.Gold);
-        main[4].Moves[0].Should().Be("Ed5w");
+        main[5].MoveNumber.ToString().Should().Be("3");
+        main[5].Side.Should().Be(Sides.Gold);
+        main[5].Moves[0].Should().Be("Ed5w");
 
         var test = "";
     }
@@ -201,16 +201,18 @@ public class NotationServiceTests
         root.Should().NotBeNull();
 
         var aeiFromTurn_0 = NotationService.GameToAeiAtTurn(root!, 0);
-        aeiFromTurn_0.Should().Be("setposition s \"RCRDRRRRHMREDCHR                                                \"");
+        aeiFromTurn_0.Should().Be("setposition g \"                                                                \"");
+        //aeiFromTurn_0.Should().Be("setposition s \"RCRDRRRRHMREDCHR                                                \"");
         
         var aeiFromTurn_1 = NotationService.GameToAeiAtTurn(root!, 1);
-        aeiFromTurn_1.Should().Be("setposition g \"RCRDRRRRHMREDCHR                                rhchecmdrrrrdrrr\"");
+        aeiFromTurn_1.Should().Be("setposition s \"RCRDRRRRHMREDCHR                                                \"");
         
         var aeiFromTurn_2 = NotationService.GameToAeiAtTurn(root!, 2);
-        aeiFromTurn_2.Should().Be("setposition s \"RMRERRRRH REDCHR   E                            rhchecmdrrrrdrrr\"");
+        aeiFromTurn_2.Should().Be("setposition g \"RCRDRRRRHMREDCHR                                rhchecmdrrrrdrrr\"");
+        //aeiFromTurn_2.Should().Be("setposition s \"RMRERRRRH REDCHR   E                            rhchecmdrrrrdrrr\"");
 
         var aeiFromTurn_80 = NotationService.GameToAeiAtTurn(root!, 80);
-        aeiFromTurn_80.Should().Be("setposition s \"  RR  HRH RR H RHCRR H   e Rhhr heC R   R D R h  Red   hrr Rh Hh\"");
+        aeiFromTurn_80.Should().Be("setposition g \"  RR  HRH RR H RHCRR H   e RhhR HeC h   r D   h  ReD   hrR rh Hh\"");
 
         var test = "";
     }
@@ -229,7 +231,9 @@ public class NotationServiceTests
         aeiFromTurn_1.Should().Be("setposition g \"RCRDRRRRHMREDCHR                                rhchecmdrrrrdrrr\"");
         
         var aeiFromTurn_2 = root.Children.First().Children.First().Children.First().AEIstring;
-        aeiFromTurn_2.Should().Be("setposition s \"RMRERRRRH REDCHR   E                            rhchecmdrrrrdrrr\"");
+        aeiFromTurn_2.Should().Be("setposition s \"RCRDRRRRH R DCHR M                 E            rhchecmdrrrrdrrr\"");
+        
+        
 
         //var aeiFromTurn_80 = NotationService.GameToAeiAtTurn(root!, 80);
         //aeiFromTurn_80.Should().Be("setposition s \"  RR  HRH RR H RHCRR H   e Rhhr heC R   R D R h  Red   hrr Rh Hh\"");

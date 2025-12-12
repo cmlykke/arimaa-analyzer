@@ -43,15 +43,14 @@ public class GameTurn
     /// </summary>
     public GameTurn? Parent { get; private set; }
 
-    public GameTurn(string MoveNumber, Sides Side, IReadOnlyList<string> Moves, bool isMainLine = true)
+    public GameTurn(string oldAEIstring, string MoveNumber, Sides Side, IReadOnlyList<string> Moves, bool isMainLine = true)
     {
         this.MoveNumber = MoveNumber;
         this.Side = Side;
         this.Moves = Moves ?? new ReadOnlyCollection<string>(new List<string>());
         this.IsMainLine = isMainLine;
         this.AEIstring =
-            NotationService.GamePlusMovesToAei(
-                NotationService.BoardToAei(NotationService.InitializeEmptyBoard(), Side), Moves);
+            NotationService.GamePlusMovesToAei(oldAEIstring, Moves);
     }
 
     /// <summary>
