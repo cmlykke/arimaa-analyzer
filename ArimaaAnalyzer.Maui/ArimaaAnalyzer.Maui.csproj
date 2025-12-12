@@ -2,7 +2,22 @@
     <!-- Add Razor SDK for BlazorWebView static web assets targets -->
     <Sdk Name="Microsoft.NET.Sdk.Razor" />
 
+    <!-- (fixes the hostpolicy.dll / runtimeconfig.json error) -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <SelfContained>false</SelfContained>
+    </PropertyGroup>
+
+    <!-- 3. Fix the SupportedOSPlatformVersion conditions (they were still checking for net8.0) -->
     <PropertyGroup>
+        <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">24.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-ios'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-maccatalyst'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">10.0.17763.0</SupportedOSPlatformVersion>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+        <!-- 1. Define MauiVersion (you forgot this → packages can’t restore properly) -->
+        <MauiVersion>10.0.0</MauiVersion>
         <!-- Add a pure .NET target for testability (no MAUI) and MAUI platform TFMs -->
         <TargetFrameworks>net8.0;net10.0;net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
         <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
