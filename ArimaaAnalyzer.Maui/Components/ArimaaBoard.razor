@@ -21,6 +21,12 @@
                     disabled="@(!Game.CanPrev)"
                     @onclick="() => { Game.GoPrev(); StateHasChanged(); }">◀</button>
 
+            <button class="outer-btn"
+                    title="Commit move as variation"
+                    aria-label="Commit move"
+                    disabled="@(!Game.CanCommitMove)"
+                    @onclick="() => { if (Game.CommitMove()) { StateHasChanged(); } }">Move</button>
+
             <button class="outer-btn outer-icon"
                     title="Next turn"
                     aria-label="Next turn"
