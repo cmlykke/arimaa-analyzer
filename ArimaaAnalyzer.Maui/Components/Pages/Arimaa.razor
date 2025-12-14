@@ -4,7 +4,11 @@
 @using ArimaaAnalyzer.Maui.Components
 @using Microsoft.AspNetCore.Components
 
-<ArimaaBoard Game="DemoGame" BoardSettings="PageBoardSettings" />
+<div class="arimaa-page">
+    <ArimaaBoard Game="DemoGame" BoardSettings="PageBoardSettings" />
+    <GameTurnChildren Game="DemoGame" />
+    
+</div>
 
 @code {
     // Demo game service for manual testing, initialized from a GameTurn tree root.

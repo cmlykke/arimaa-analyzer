@@ -16,6 +16,9 @@ public sealed class ArimaaGameService
 
     public GameTurn? CurrentNode { get; private set; }
 
+    // Raised whenever the CurrentNode changes (e.g., navigation or commit)
+    public event Action? CurrentNodeChanged;
+
     // Snapshot of the state when the current node was loaded; used to compute pending move(s)
     private GameState? _snapshotAtLoad;
 
@@ -65,6 +68,9 @@ public sealed class ArimaaGameService
             boardorientation = orientation
         };
         var test = "test";
+
+        // Notify listeners that the active node has changed
+        CurrentNodeChanged?.Invoke();
     }
 
     public bool CanPrev => CurrentNode?.Parent is not null;

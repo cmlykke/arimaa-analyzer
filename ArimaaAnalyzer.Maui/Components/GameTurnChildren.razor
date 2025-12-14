@@ -1,0 +1,48 @@
+﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using Microsoft.AspNetCore.Components
+@implements IDisposable
+
+<div class="gtc-container">
+    @if (Game?.CurrentNode is null)
+    {
+        <div class="gtc-empty">No active node</div>
+    }
+    else if (Game.CurrentNode.Children is { Count: > 0 } children)
+    {
+        @foreach (var child in children)
+        {
+            <div class="gtc-item">@string.Join(" ", child.Moves.ToArray())</div>
+        }
+    }
+    else
+    {
+        <div class="gtc-empty">No children</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public ArimaaGameService Game { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        if (Game is not null)
+        {
+            Game.CurrentNodeChanged += OnCurrentNodeChanged;
+        }
+    }
+
+    private void OnCurrentNodeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (Game is not null)
+        {
+            Game.CurrentNodeChanged -= OnCurrentNodeChanged;
+        }
+    }
+}
