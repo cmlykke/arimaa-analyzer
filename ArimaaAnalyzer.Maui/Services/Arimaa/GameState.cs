@@ -15,7 +15,9 @@ public sealed class GameState
         private set => _aeiSetPosition = value;
     }
     
-    public Side SideToMove { get; }
+    public Sides SideToMove { get; }
+
+    public BoardOrientation boardorientation { get; set; }
 
     // Optional: track current node when initialized from a GameTurn
     public GameTurn? CurrentNode { get; }
@@ -33,11 +35,19 @@ public sealed class GameState
 
         // Validate and parse the AEI string
         ValidateAndParseAei(aeiSetPosition, out var side, out var boardString);
-        
+
+        boardorientation = getBoardOrientationFromAEI(aeiSetPosition);
         SideToMove = side;
         _aeiSetPosition = aeiSetPosition;
     }
 
+    public BoardOrientation getBoardOrientationFromAEI(string AEIstring)
+    {
+        // Treat incoming AEI as already normalized with Gold homebase on the left
+        // (GoldWestSIlverEast). Orientation is a view concern.
+        return BoardOrientation.GoldWestSIlverEast;
+    }
+    
     /// <summary>
     /// Initialize the state from a parsed GameTurn node. Uses the node's AEIstring.
     /// </summary>
@@ -48,6 +58,8 @@ public sealed class GameState
         ValidateAndParseAei(node.AEIstring, out var side, out _);
         SideToMove = side;
         _aeiSetPosition = node.AEIstring;
+        boardorientation = getBoardOrientationFromAEI(node.AEIstring);;
+        var test = "test";
     }
 
     /// <summary>
@@ -59,13 +71,17 @@ public sealed class GameState
         if (!from.IsOnBoard || !to.IsOnBoard) return false;
         if (from == to) return false;
 
-        // Extract the current board string from AEI
+        // Map display-space positions to normalized board coordinates
+        var (nrFrom, ncFrom) = BoardRotationService.MapDisplayToNormalized(from.Row, from.Col, boardorientation);
+        var (nrTo, ncTo) = BoardRotationService.MapDisplayToNormalized(to.Row, to.Col, boardorientation);
+
+        // Extract the current board string from AEI (normalized orientation)
         var boardChars = ExtractBoardString();
         if (boardChars == null) return false;
 
         // Check source and destination
-        var fromIdx = from.Row * 8 + from.Col;
-        var toIdx = to.Row * 8 + to.Col;
+        var fromIdx = nrFrom * 8 + ncFrom;
+        var toIdx = nrTo * 8 + ncTo;
 
         var sourcePiece = boardChars[fromIdx];
         if (sourcePiece == ' ') return false; // no piece at source
@@ -109,7 +125,8 @@ public sealed class GameState
         if (!p.IsOnBoard) return ' ';
         var boardChars = ExtractBoardString();
         if (boardChars == null) return ' ';
-        var idx = p.Row * 8 + p.Col;
+        var (nr, nc) = BoardRotationService.MapDisplayToNormalized(p.Row, p.Col, boardorientation);
+        var idx = nr * 8 + nc;
         return boardChars[idx];
     }
 
@@ -197,11 +214,11 @@ public sealed class GameState
         if (newBoardString.Length != 64)
             throw new ArgumentException("Board string must be exactly 64 characters.", nameof(newBoardString));
 
-        var sideChar = SideToMove == Side.Gold ? 'g' : 's';
+        var sideChar = SideToMove == Sides.Gold ? 'g' : 's';
         localAeiSetPosition = $"setposition {sideChar} \"{newBoardString}\"";
     }
 
-    private static void ValidateAndParseAei(string aeiSetPosition, out Side side, out string boardString)
+    private static void ValidateAndParseAei(string aeiSetPosition, out Sides side, out string boardString)
     {
         var trimmed = aeiSetPosition.Trim();
         if (!trimmed.StartsWith("setposition ", StringComparison.OrdinalIgnoreCase))
@@ -214,8 +231,8 @@ public sealed class GameState
         var sideChar = char.ToLowerInvariant(rest[0]);
         side = sideChar switch
         {
-            'g' => Side.Gold,
-            's' => Side.Silver,
+            'g' => Sides.Gold,
+            's' => Sides.Silver,
             _ => throw new ArgumentException("Side must be 'g' or 's'.", nameof(aeiSetPosition))
         };
 
@@ -235,7 +252,7 @@ public sealed class GameState
             return null;
 
         var isUpper = char.IsUpper(ch);
-        var side = isUpper ? Side.Gold : Side.Silver;
+        var side = isUpper ? Sides.Gold : Sides.Silver;
         var up = char.ToUpperInvariant(ch);
         return up switch
         {

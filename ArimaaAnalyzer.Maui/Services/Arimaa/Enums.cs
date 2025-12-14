@@ -1,9 +1,11 @@
 ﻿namespace ArimaaAnalyzer.Maui.Services.Arimaa;
 
-public enum Side
+public enum BoardOrientation
 {
-    Gold,
-    Silver
+    GoldSouthSilverNorth,
+    GoldWestSIlverEast,
+    GoldNorthSilverSouth,
+    GoldEastSilverWest
 }
 
 public enum PieceType

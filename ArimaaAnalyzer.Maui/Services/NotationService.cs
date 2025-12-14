@@ -101,7 +101,7 @@ public static class NotationService
         var regex = new Regex(@"^(\d+)([wb])\s+(.*)$", RegexOptions.Compiled);
 
         string currentAei = NotationService.BoardToAei(NotationService.InitializeEmptyBoard(), Sides.Gold);
-        root = new GameTurn(currentAei, "0", Sides.Silver, Array.Empty<string>(), isMainLine: true);
+        root = new GameTurn(currentAei, currentAei, "0", Sides.Silver, Array.Empty<string>(), isMainLine: true);
         current = root;
         foreach (var line in lines)
         {
@@ -135,7 +135,7 @@ public static class NotationService
                     .ToArray();
             }
 
-            var node = new GameTurn(currentAei, moveNumber, sideToMove, individualMoves, isMainLine: true);
+            var node = new GameTurn(currentAei, "", moveNumber, sideToMove, individualMoves, isMainLine: true);
             currentAei = node.AEIstring;
             current!.AddChild(node);
             current = node;

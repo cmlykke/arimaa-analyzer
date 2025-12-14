@@ -55,9 +55,15 @@ public sealed class ArimaaGameService
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
         CurrentNode = node;
+        // Preserve current board orientation across loads so UI rotation stays consistent
+        var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
         State = new GameState(node);
+        State.boardorientation = orientation;
         // Refresh snapshot for pending-move computation
-        _snapshotAtLoad = new GameState(node);
+        _snapshotAtLoad = new GameState(node)
+        {
+            boardorientation = orientation
+        };
         var test = "test";
     }
 
@@ -93,14 +99,14 @@ public sealed class ArimaaGameService
 
         // Compute the official move notation between the snapshot and the current state
         var sideToMove = _snapshotAtLoad.SideToMove;
-        var notation = CorrectMoveService.ComputeMoveSequence(_snapshotAtLoad, State, sideToMove);
-        if (string.IsNullOrWhiteSpace(notation) || notation == "error")
+        var notation = CorrectMoveService.ComputeMoveSequence(_snapshotAtLoad, State);
+        if (string.IsNullOrWhiteSpace(notation.Item1) || notation.Item2 == "error")
         {
             return false;
         }
 
         // Determine side in Sides enum
-        var sidesEnum = sideToMove == Side.Gold ? Sides.Gold : Sides.Silver;
+        var sidesEnum = sideToMove == Sides.Gold ? Sides.Gold : Sides.Silver;
 
         // Determine the move number string
         var moveNumberStr = CurrentNode.MoveNumber;
@@ -108,16 +114,30 @@ public sealed class ArimaaGameService
         {
             // Increment when a new Gold move starts a new full number (assuming Silver completes the previous)
             // Heuristic: if side to move is Gold, increment; else keep same number
-            var newNum = sideToMove == Side.Gold ? curNum + 1 : curNum;
+            var newNum = sideToMove == Sides.Gold ? curNum + 1 : curNum;
             moveNumberStr = newNum.ToString();
         }
 
         // Build child turn with IsMainLine = false
-        var child = new GameTurn(CurrentNode.AEIstring, moveNumberStr, sidesEnum, new List<string> { notation }, isMainLine: false);
+        var child = new GameTurn(CurrentNode.AEIstring, notation.Item2, moveNumberStr, sidesEnum, new List<string> { notation.Item1 }, isMainLine: false);
         CurrentNode.AddChild(child);
 
         // Load the newly created variation node
         Load(child);
         return true;
+    }
+
+    // Rotate the board orientation clockwise through the defined enum values
+    public void RotateBoardClockwise()
+    {
+        var current = State.boardorientation;
+        var next = current switch
+        {
+            BoardOrientation.GoldSouthSilverNorth => BoardOrientation.GoldWestSIlverEast,
+            BoardOrientation.GoldWestSIlverEast => BoardOrientation.GoldNorthSilverSouth,
+            BoardOrientation.GoldNorthSilverSouth => BoardOrientation.GoldEastSilverWest,
+            _ => BoardOrientation.GoldSouthSilverNorth
+        };
+        State.boardorientation = next;
     }
 }

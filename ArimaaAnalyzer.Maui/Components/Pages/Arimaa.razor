@@ -15,7 +15,8 @@
         
         
         var root = NotationService.ExtractTurnsWithMoves(Game_base)!;
-        var service = new ArimaaGameService(new GameState(root));
+        var gamestate = new GameState(root);
+        var service = new ArimaaGameService(gamestate);
         service.Load(root); // ensure CurrentNode is set and AEI loaded
         service.ShowOuterUi = true; // show navigation buttons
         return service;

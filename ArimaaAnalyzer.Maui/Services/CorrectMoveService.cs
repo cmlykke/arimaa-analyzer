@@ -40,19 +40,21 @@ public static class CorrectMoveService
     }
 
     /// <summary>
-    /// Try to compute a legal sequence (1..4 steps) for <paramref name="sideToMove"/> that transforms
-    /// <paramref name="before"/> into <paramref name="after"/>. Returns official notation string or "error".
+    /// Try to compute a legal sequence (1..4 steps) for the side to move in <paramref name="before"/>
+    /// that transforms <paramref name="before"/> into <paramref name="after"/>. Returns
+    /// (officialNotation, resultingAei) or ("error", "error") on failure.
     /// </summary>
-    public static string ComputeMoveSequence(GameState before, GameState after, Side sideToMove)
+    public static (string, string) ComputeMoveSequence(GameState before, GameState after)
     {
-        if (before == null || after == null) return "error";
+        if (before == null || after == null) return ("error", "error");
+        var sideToMove = before.SideToMove;
 
         var expectedAfterSide = Opposite(sideToMove);
 
         var start = BoardState.From(before, sideToMove);
         var goal = BoardState.From(after, expectedAfterSide);
 
-        if (start.BoardEquals(goal)) return "error";
+        if (start.BoardEquals(goal)) return ("error", "error");
 
         var seen = new HashSet<string> { start.Hash };
         var q = new Queue<BoardState>();
@@ -64,12 +66,16 @@ public static class CorrectMoveService
 
             if (cur.StepsCount is > 0 and <= 4 && cur.BoardEquals(goal))
             {
-                return cur.RenderNotation();
+                var rendered = cur.RenderNotation();
+                var newSide = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+                var AEIfromBoard = NotationService.BoardToAei(cur.Board, newSide);
+                return (rendered, AEIfromBoard);
             }
 
             if (cur.StepsCount >= 4) continue;
+            var afterGeneratedSides = GenerateSlides(cur);
 
-            foreach (var next in GenerateSlides(cur))
+            foreach (var next in afterGeneratedSides)
             {
                 if (seen.Add(next.Hash))
                 {
@@ -87,7 +93,7 @@ public static class CorrectMoveService
             }
         }
 
-        return "error";
+        return ("error", "error");
     }
 
     /// <summary>
@@ -110,7 +116,7 @@ public static class CorrectMoveService
             var trapCol = trapIdx % 8;
             var trapPos = new Position(trapRow, trapCol);
 
-            var side = IsGold(piece) ? Side.Gold : Side.Silver;
+            var side = IsGold(piece) ? Sides.Gold : Sides.Silver;
             if (!HasAdjacentFriendly(state, trapRow, trapCol, side))
             {
                 state.RemovePieceAt(trapPos);
@@ -123,8 +129,8 @@ public static class CorrectMoveService
         for (var r = 0; r < 8; r++)
         for (var c = 0; c < 8; c++)
         {
-            var ch = state.Board[r, c];
-            if (ch == ' ' || (IsGold(ch) ? Side.Gold : Side.Silver) != state.SideToMove) continue;
+            var ch = state.Get(r, c);
+            if (ch == ' ' || (IsGold(ch) ? Sides.Gold : Sides.Silver) != state.SideToMove) continue;
 
             if (IsFrozen(state.Board, r, c)) continue;
 
@@ -133,7 +139,7 @@ public static class CorrectMoveService
                 var r2 = r + dr;
                 var c2 = c + dc;
                 if (r2 < 0 || r2 > 7 || c2 < 0 || c2 > 7) continue;
-                if (state.Board[r2, c2] != ' ') continue;
+                if (state.Get(r2, c2) != ' ') continue;
 
                 if (ToUpper(ch) == 'R')
                 {
@@ -142,8 +148,8 @@ public static class CorrectMoveService
                 }
 
                 var next = state.CloneForNext();
-                next.Board[r2, c2] = ch;
-                next.Board[r, c] = ' ';
+                next.Set(r2, c2, ch);
+                next.Set(r, c, ' ');
                 next.AppendStep(ch, r, c, r2, c2, dch);
 
                 ApplyTrapCaptures(next.Board);
@@ -161,8 +167,8 @@ public static class CorrectMoveService
         for (var r = 0; r < 8; r++)
         for (var c = 0; c < 8; c++)
         {
-            var pusher = state.Board[r, c];
-            if (pusher == ' ' || (IsGold(pusher) ? Side.Gold : Side.Silver) != state.SideToMove) continue;
+            var pusher = state.Get(r, c);
+            if (pusher == ' ' || (IsGold(pusher) ? Sides.Gold : Sides.Silver) != state.SideToMove) continue;
             if (IsFrozen(state.Board, r, c)) continue;
 
             // inspect adjacent enemy pieces
@@ -171,31 +177,31 @@ public static class CorrectMoveService
                 var er = r + drE;
                 var ec = c + dcE;
                 if (!InBounds(er, ec)) continue;
-                var enemy = state.Board[er, ec];
+                var enemy = state.Get(er, ec);
                 if (enemy == ' ') continue;
-                var enemySide = IsGold(enemy) ? Side.Gold : Side.Silver;
+                var enemySide = IsGold(enemy) ? Sides.Gold : Sides.Silver;
                 if (enemySide == state.SideToMove) continue;
                 if (!PieceHierarchy.CanPushOrPull(pusher, enemy)) continue;
 
                 // Try PUSH: enemy moves away from pusher along (drE, dcE), then pusher moves into (er,ec)
                 var er2 = er + drE;
                 var ec2 = ec + dcE;
-                if (InBounds(er2, ec2) && state.Board[er2, ec2] == ' ')
+                if (InBounds(er2, ec2) && state.Get(er2, ec2) == ' ')
                 {
                     // Check rabbit backward restriction for pusher's second step into (er,ec)
                     if (!IsRabbitBackwardMove(pusher, drE))
                     {
                         var next = state.CloneForNext();
                         // Step 1: move enemy to (er2,ec2)
-                        next.Board[er2, ec2] = enemy;
-                        next.Board[er, ec] = ' ';
+                        next.Set(er2, ec2, enemy);
+                        next.Set(er, ec, ' ');
                         next.AppendStep(enemy, er, ec, er2, ec2, DirChar(drE, dcE));
                         ApplyTrapCaptures(next.Board);
 
                         // If enemy got captured on a trap, the destination will be empty; that's fine for step 2.
                         // Step 2: move pusher into (er,ec)
-                        next.Board[er, ec] = pusher; // should be empty after step1
-                        next.Board[r, c] = ' ';
+                        next.Set(er, ec, pusher); // should be empty after step1
+                        next.Set(r, c, ' ');
                         next.AppendStep(pusher, r, c, er, ec, DirChar(drE, dcE));
                         ApplyTrapCaptures(next.Board);
 
@@ -210,24 +216,24 @@ public static class CorrectMoveService
                     var pc2 = c + dcP;
                     if (!InBounds(pr2, pc2)) continue;
                     if (pr2 == er && pc2 == ec) continue; // cannot move into enemy square
-                    if (state.Board[pr2, pc2] != ' ') continue;
+                    if (state.Get(pr2, pc2) != ' ') continue;
                     // rabbit backward restriction for pusher first step
                     if (IsRabbitBackwardMove(pusher, drP)) continue;
 
                     var next2 = state.CloneForNext();
                     // Step 1: move pusher to (pr2,pc2)
-                    next2.Board[pr2, pc2] = pusher;
-                    next2.Board[r, c] = ' ';
+                    next2.Set(pr2, pc2, pusher);
+                    next2.Set(r, c, ' ');
                     next2.AppendStep(pusher, r, c, pr2, pc2, DirChar(drP, dcP));
                     ApplyTrapCaptures(next2.Board);
 
                     // If enemy was captured due to leaving support (e.g., on trap), pull cannot proceed
-                    if (next2.Board[er, ec] != enemy) continue;
+                    if (next2.Get(er, ec) != enemy) continue;
 
                     // Step 2: enemy moves into original pusher square (r,c)
                     // This square is empty after step1 by construction
-                    next2.Board[r, c] = enemy;
-                    next2.Board[er, ec] = ' ';
+                    next2.Set(r, c, enemy);
+                    next2.Set(er, ec, ' ');
                     // Direction from enemy (er,ec) to (r,c) is (-drE, -dcE)
                     next2.AppendStep(enemy, er, ec, r, c, DirChar(-drE, -dcE));
                     ApplyTrapCaptures(next2.Board);
@@ -238,31 +244,31 @@ public static class CorrectMoveService
         }
     }
 
-    private static bool IsFrozen(char[,] board, int r, int c)
+    private static bool IsFrozen(string[] board, int r, int c)
     {
-        var p = board[r, c];
-        if (p == ' ') return false;
+        var p = board[r][c];
+        if (p == '.') return false;
 
-        if (HasAdjacentFriendly(board, r, c, IsGold(p) ? Side.Gold : Side.Silver)) return false;
+        if (HasAdjacentFriendly(board, r, c, IsGold(p) ? Sides.Gold : Sides.Silver)) return false;
 
         var myStr = PieceHierarchy.GetHierarchy(p);
-        return HasAdjacentStrongerEnemy(board, r, c, IsGold(p) ? Side.Gold : Side.Silver, myStr);
+        return HasAdjacentStrongerEnemy(board, r, c, IsGold(p) ? Sides.Gold : Sides.Silver, myStr);
     }
 
-    private static bool HasAdjacentFriendly(char[,] b, int r, int c, Side side)
+    private static bool HasAdjacentFriendly(string[] b, int r, int c, Sides side)
     {
         for (var k = 0; k < 4; k++)
         {
             var r2 = r + ((k == 0) ? -1 : (k == 2) ? 1 : 0);
             var c2 = c + ((k == 1) ? 1 : (k == 3) ? -1 : 0);
             if (r2 < 0 || r2 > 7 || c2 < 0 || c2 > 7) continue;
-            var q = b[r2, c2];
-            if (q != ' ' && ((IsGold(q) ? Side.Gold : Side.Silver) == side)) return true;
+            var q = b[r2][c2];
+            if (q != '.' && ((IsGold(q) ? Sides.Gold : Sides.Silver) == side)) return true;
         }
         return false;
     }
 
-    private static bool HasAdjacentFriendly(GameState state, int r, int c, Side side)
+    private static bool HasAdjacentFriendly(GameState state, int r, int c, Sides side)
     {
         for (var k = 0; k < 4; k++)
         {
@@ -273,65 +279,68 @@ public static class CorrectMoveService
             var piece = state.GetPieceChar(new Position(r2, c2));
             if (piece != ' ')
             {
-                var pieceSide = IsGold(piece) ? Side.Gold : Side.Silver;
+                var pieceSide = IsGold(piece) ? Sides.Gold : Sides.Silver;
                 if (pieceSide == side) return true;
             }
         }
         return false;
     }
 
-    private static bool HasAdjacentStrongerEnemy(char[,] b, int r, int c, Side side, int myStr)
+    private static bool HasAdjacentStrongerEnemy(string[] b, int r, int c, Sides side, int myStr)
     {
         for (var k = 0; k < 4; k++)
         {
             var r2 = r + ((k == 0) ? -1 : (k == 2) ? 1 : 0);
             var c2 = c + ((k == 1) ? 1 : (k == 3) ? -1 : 0);
             if (r2 < 0 || r2 > 7 || c2 < 0 || c2 > 7) continue;
-            var q = b[r2, c2];
-            if (q != ' ')
+            var q = b[r2][c2];
+            if (q != '.')
             {
-                var qSide = IsGold(q) ? Side.Gold : Side.Silver;
+                var qSide = IsGold(q) ? Sides.Gold : Sides.Silver;
                 if (qSide != side && PieceHierarchy.GetHierarchy(q) > myStr) return true;
             }
         }
         return false;
     }
 
-    private static void ApplyTrapCaptures(char[,] board)
+    private static void ApplyTrapCaptures(string[] board)
     {
         var traps = new (int r, int c)[] { (2, 2), (2, 5), (5, 2), (5, 5) };
         foreach (var (r, c) in traps)
         {
-            var p = board[r, c];
-            if (p == ' ') continue;
-            if (!HasAdjacentFriendly(board, r, c, IsGold(p) ? Side.Gold : Side.Silver))
+            var p = board[r][c];
+            if (p == '.') continue;
+            if (!HasAdjacentFriendly(board, r, c, IsGold(p) ? Sides.Gold : Sides.Silver))
             {
-                board[r, c] = ' ';
+                // set to '.'
+                var rowArr = board[r].ToCharArray();
+                rowArr[c] = '.';
+                board[r] = new string(rowArr);
             }
         }
     }
 
-    private static Side Opposite(Side s) => s == Side.Gold ? Side.Silver : Side.Gold;
+    private static Sides Opposite(Sides s) => s == Sides.Gold ? Sides.Silver : Sides.Gold;
 
     private sealed class BoardState
     {
-        public char[,] Board { get; }
-        public Side SideToMove { get; }
+        public string[] Board { get; }
+        public Sides SideToMove { get; }
         private readonly List<string> _steps = new();
 
         public int StepsCount => _steps.Count;
         public string Hash => ComputeHash(Board, SideToMove);
 
-        private BoardState(char[,] board, Side side, IEnumerable<string>? steps = null)
+        private BoardState(string[] board, Sides side, IEnumerable<string>? steps = null)
         {
             Board = board;
             SideToMove = side;
             if (steps != null) _steps.AddRange(steps);
         }
 
-        public static BoardState From(GameState s, Side side)
+        public static BoardState From(GameState s, Sides side)
         {
-            var b = new char[8, 8];
+            var rows = new string[8];
             var aei = s.localAeiSetPosition;
             if (string.IsNullOrWhiteSpace(aei))
                 throw new ArgumentException("GameState.localAeiSetPosition must be set.");
@@ -346,24 +355,26 @@ public static class CorrectMoveService
             if (flat.Length != 64)
                 throw new ArgumentException("Malformed AEI setposition: board string must be exactly 64 characters.");
 
-            for (var i = 0; i < 64; i++)
-            {
-                var r = i / 8;
-                var c = i % 8;
-                b[r, c] = flat[i];
-            }
+            for (var r = 0; r < 8; r++)
+                rows[r] = flat.Substring(r * 8, 8).Replace(' ', '.');
 
-            return new BoardState(b, side);
+            return new BoardState(rows, side);
         }
 
         public BoardState CloneForNext()
         {
-            var copy = new char[8, 8];
-            for (var r = 0; r < 8; r++)
-            for (var c = 0; c < 8; c++)
-                copy[r, c] = Board[r, c];
-
+            var copy = new string[8];
+            for (var r = 0; r < 8; r++) copy[r] = string.Copy(Board[r]);
             return new BoardState(copy, SideToMove, _steps);
+        }
+
+        public char Get(int r, int c) => Board[r][c] == '.' ? ' ' : Board[r][c] == ' ' ? ' ' : Board[r][c];
+
+        public void Set(int r, int c, char ch)
+        {
+            var row = Board[r].ToCharArray();
+            row[c] = ch == ' ' ? '.' : ch;
+            Board[r] = new string(row);
         }
 
         public void AppendStep(char pieceChar, int r1, int c1, int r2, int c2, char dir)
@@ -375,28 +386,29 @@ public static class CorrectMoveService
             _steps.Add(sb.ToString());
         }
 
-        public string RenderNotation() => string.Join(" ", _steps);
+        public string RenderNotation()
+        { 
+            var output = string.Join(" ", _steps);
+            return output;
+        }
 
         public bool BoardEquals(BoardState other)
         {
             for (var r = 0; r < 8; r++)
             for (var c = 0; c < 8; c++)
             {
-                if (Board[r, c] != other.Board[r, c]) return false;
+                var a = Board[r][c];
+                var b = other.Board[r][c];
+                if ((a == '.' ? ' ' : a) != (b == '.' ? ' ' : b)) return false;
             }
             return true;
         }
 
-        private static string ComputeHash(char[,] board, Side side)
+        private static string ComputeHash(string[] board, Sides side)
         {
             var sb = new StringBuilder(100);
-            sb.Append(side == Side.Gold ? 'g' : 's');
-            for (var r = 0; r < 8; r++)
-            for (var c = 0; c < 8; c++)
-            {
-                var ch = board[r, c];
-                sb.Append(ch == ' ' ? '.' : ch);
-            }
+            sb.Append(side == Sides.Gold ? 'g' : 's');
+            for (var r = 0; r < 8; r++) sb.Append(board[r]);
             return sb.ToString();
         }
 

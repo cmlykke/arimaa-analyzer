@@ -38,9 +38,9 @@ public class CorrectMoveServiceTests
 
         var after = new GameState(NotationService.BoardToAei(afterBoard, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(before, after);
 
-        result.Should().Be("Hh2n");
+        result.Item1.Should().Be("Hh2n");
     }
 
     [Fact(DisplayName = "ComputeMoveSequence finds two slide steps (order-insensitive)")]
@@ -59,10 +59,10 @@ public class CorrectMoveServiceTests
 
         var after = new GameState(NotationService.BoardToAei(afterBoard, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(before, after);
 
         // Accept either order since BFS may find any order of the two independent steps
-        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
         steps.Should().HaveCount(2);
         steps.ToHashSet().Should().BeEquivalentTo(new HashSet<string> { "Hh2n", "Dg2n" });
     }
@@ -74,9 +74,9 @@ public class CorrectMoveServiceTests
         // after equals before side switched to Silver
         var after = new GameState(NotationService.BoardToAei(BaseBoard, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(before, after);
 
-        result.Should().Be("error");
+        result.Item1.Should().Be("error");
     }
 
     [Fact(DisplayName = "Frozen piece cannot move (Cat frozen by stronger adjacent enemy)")]
@@ -101,9 +101,13 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        // This is a silver move (before: 'setposition s', after: 'setposition g'),
+        // so sideToMove must be Silver. Passing Gold would force the engine to
+        // try to explain the change via gold actions (slides/push/pull), which is impossible
+        // when only silver pieces have moved.
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Should().Be("error");
+        result.Item1.Should().Be("error");
     }
 
     [Fact(DisplayName = "Trap capture from slide is applied (Cat to c3 without support)")]
@@ -125,9 +129,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Should().Be("Cc4s");
+        result.Item1.Should().Be("Cc4s");
     }
 
     [Fact(DisplayName = "Push/Pull required transition is now supported (push)")]
@@ -152,8 +156,8 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
-        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
+        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
         steps.Should().HaveCount(2);
         steps.Should().ContainInOrder("Rd5n", "Ed4n");
     }
@@ -200,9 +204,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
         steps.Should().HaveCount(2);
         // Our notation uses uppercase piece letters always
         steps.Should().ContainInOrder("Rd5n", "Ed4n"); // push = enemy moves first, then pusher
@@ -226,9 +230,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
         steps.Should().HaveCount(2);
         // Enemy rabbit is pushed onto c3 (trap) and captured immediately, then E moves into b3
         steps.Should().ContainInOrder("Rb3e", "Ea3e");
@@ -250,9 +254,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
         steps.Should().HaveCount(2);
         // Pull = pusher moves first, then enemy follows into origin square
         steps.Should().ContainInOrder("Ee5n", "Re4n");
@@ -274,9 +278,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Should().Be("error");
+        result.Item1.Should().Be("error");
     }
 
     [Fact(DisplayName = "Rabbit cannot initiate pull by moving backward")]
@@ -295,9 +299,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Should().Be("error");
+        result.Item1.Should().Be("error");
     }
 
     [Fact(DisplayName = "Frozen pusher cannot push or pull")]
@@ -317,9 +321,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Should().Be("error");
+        result.Item1.Should().Be("error");
     }
 
     [Fact(DisplayName = "Illegal push by weaker piece should return error")]
@@ -338,9 +342,9 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Should().Be("error");
+        result.Item1.Should().Be("error");
     }
 
     [Fact(DisplayName = "Push blocked because destination is occupied should return error")]
@@ -360,8 +364,27 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
-        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Should().Be("error");
+        result.Item1.Should().Be("error");
     }
+    
+    // move two silver pieecs:
+    // setposition s "RCRDRRRR  REDCHRHM                      rh        checmdrrrrdrrr"
+    
+    [Fact(DisplayName = "I had a failure where two states couldnt be computed after two siler pieces were moved")]
+    public void Push_Blocked_Destination_TwoSilverOiecesMovedShouldNotReturnErrorr()
+    {
+        var beforeAEI = "setposition s \"RCRDRRRR  REDCHRHM                              rhchecmdrrrrdrrr\"";
+        var afterAEI = "setposition g \"RCRDRRRR  REDCHRHM                      rh        checmdrrrrdrrr\"";
+        
+
+        var gsBefore = new GameState(beforeAEI);
+        var gsAfter = new GameState(afterAEI);
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
+
+        result.Item1.Should().Be("error");
+    }
+    
 }
