@@ -1,0 +1,22 @@
+﻿.gtc-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+    max-width: 100%;
+}
+
+.gtc-item {
+    padding: 6px 8px;
+    background: rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 4px;
+    font-family: Consolas, monospace;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.gtc-empty {
+    color: rgba(0,0,0,0.6);
+    font-style: italic;
+}
