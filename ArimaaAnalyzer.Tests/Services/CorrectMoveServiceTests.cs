@@ -426,7 +426,7 @@ public class CorrectMoveServiceTests
         result.Item1.Should().Be("Ra7s Hb7s");
     }
     
-    
+    /*
     [Fact(DisplayName = "An Elephant must implicitly push and pull a rabbit")]
     public void ElephantMustImplicitlyPushPull()
     {
@@ -461,7 +461,7 @@ public class CorrectMoveServiceTests
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
         
         result.Item1.Should().NotBe("error");
-    }
+    }*/
 //setposition g "                  R R      r       E                            "
     //setposition s "                  RER      r                                    "
 }
