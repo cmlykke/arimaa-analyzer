@@ -98,6 +98,9 @@ public sealed class ArimaaGameService
     public bool CanCommitMove => CurrentNode is not null && _snapshotAtLoad is not null &&
                                  !string.Equals(_snapshotAtLoad.localAeiSetPosition, State.localAeiSetPosition, StringComparison.Ordinal);
 
+    // Alias for UI clarity: we can reset whenever we have uncommitted changes
+    public bool CanResetPendingMoves => CanCommitMove;
+
     // Create a new non-mainline child node from the pending move(s) and move the current position to that child
     public bool CommitMove()
     {
@@ -131,6 +134,22 @@ public sealed class ArimaaGameService
         // Load the newly created variation node
         Load(child);
         return true;
+    }
+
+    // Revert the board to the state when the current node was loaded (discard uncommitted moves)
+    public void ResetPendingMoves()
+    {
+        if (CurrentNode is null || _snapshotAtLoad is null) return;
+
+        // Preserve current orientation while restoring the node state
+        var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
+        State = new GameState(CurrentNode)
+        {
+            boardorientation = orientation
+        };
+
+        // Clear any UI selection
+        Selected = null;
     }
 
     // Rotate the board orientation clockwise through the defined enum values

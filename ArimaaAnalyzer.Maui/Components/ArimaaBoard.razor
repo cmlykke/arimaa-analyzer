@@ -43,6 +43,12 @@
                         title="Rotate"
                         aria-label="Rotate"
                         @onclick="() => { Game.RotateBoardClockwise(); StateHasChanged(); }">Rt</button>
+
+                <button class="outer-btn"
+                        title="Reset pending moves"
+                        aria-label="Reset pending moves"
+                        disabled="@(!Game.CanResetPendingMoves)"
+                        @onclick="() => { Game.ResetPendingMoves(); StateHasChanged(); }">Reset</button>
             </div>
         }
 

@@ -7,6 +7,7 @@ a list will be filled with a new AEI,
 and then the code will infer each step one at a time.
 then update the tests.
 
+-- 1 - create a new UI element that writes the current Move
 
 
 
