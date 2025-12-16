@@ -19,8 +19,9 @@ public sealed class ArimaaGameService
     // Raised whenever the CurrentNode changes (e.g., navigation or commit)
     public event Action? CurrentNodeChanged;
 
-    // Snapshot of the state when the current node was loaded; used to compute pending move(s)
-    private GameState? _snapshotAtLoad;
+    // Snapshots of the state across user-made steps (index 0 = state when the node was loaded).
+    // Each successful single-step user move appends a new snapshot.
+    private List<GameState>? _snapshots;
 
     public Position? Selected { get; private set; }
 
@@ -63,10 +64,10 @@ public sealed class ArimaaGameService
         var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
         State = new GameState(node);
         State.boardorientation = orientation;
-        // Refresh snapshot for pending-move computation
-        _snapshotAtLoad = new GameState(node)
+        // Initialize snapshots for pending-move computation (index 0 = loaded state)
+        _snapshots = new List<GameState>
         {
-            boardorientation = orientation
+            new GameState(node) { boardorientation = orientation }
         };
         var test = "test";
 
@@ -96,8 +97,8 @@ public sealed class ArimaaGameService
     }
 
     // Indicates whether the board has diverged from the loaded node (i.e., there is a pending move to commit)
-    public bool CanCommitMove => CurrentNode is not null && _snapshotAtLoad is not null &&
-                                 !string.Equals(_snapshotAtLoad.localAeiSetPosition, State.localAeiSetPosition, StringComparison.Ordinal);
+    public bool CanCommitMove => CurrentNode is not null && _snapshots is { Count: >= 2 } &&
+                                 !string.Equals(_snapshots[0].localAeiSetPosition, State.localAeiSetPosition, StringComparison.Ordinal);
 
     // Alias for UI clarity: we can reset whenever we have uncommitted changes
     public bool CanResetPendingMoves => CanCommitMove;
@@ -107,8 +108,8 @@ public sealed class ArimaaGameService
     {
         get
         {
-            if (!CanResetPendingMoves || _snapshotAtLoad is null) return null;
-            var notation = CorrectMoveService.ComputeMoveSequence(_snapshotAtLoad, State);
+            if (!CanResetPendingMoves || _snapshots is null || _snapshots.Count < 2) return null;
+            var notation = CorrectMoveService.ComputeMoveSequenceFromSnapshots(_snapshots);
             if (string.IsNullOrWhiteSpace(notation.Item1) || notation.Item2 == "error") return null;
             return notation.Item1;
         }
@@ -117,11 +118,11 @@ public sealed class ArimaaGameService
     // Create a new non-mainline child node from the pending move(s) and move the current position to that child
     public bool CommitMove()
     {
-        if (!CanCommitMove || CurrentNode is null || _snapshotAtLoad is null) return false;
+        if (!CanCommitMove || CurrentNode is null || _snapshots is null) return false;
 
-        // Compute the official move notation between the snapshot and the current state
-        var sideToMove = _snapshotAtLoad.SideToMove;
-        var notation = CorrectMoveService.ComputeMoveSequence(_snapshotAtLoad, State);
+        // Compute the official move notation based on the accumulated snapshots
+        var sideToMove = _snapshots[0].SideToMove;
+        var notation = CorrectMoveService.ComputeMoveSequenceFromSnapshots(_snapshots);
         if (string.IsNullOrWhiteSpace(notation.Item1) || notation.Item2 == "error")
         {
             return false;
@@ -152,14 +153,17 @@ public sealed class ArimaaGameService
     // Revert the board to the state when the current node was loaded (discard uncommitted moves)
     public void ResetPendingMoves()
     {
-        if (CurrentNode is null || _snapshotAtLoad is null) return;
+        if (CurrentNode is null || _snapshots is null || _snapshots.Count == 0) return;
 
-        // Preserve current orientation while restoring the node state
+        // Preserve current orientation while restoring the loaded snapshot
         var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
-        State = new GameState(CurrentNode)
+        State = new GameState(_snapshots[0].localAeiSetPosition)
         {
             boardorientation = orientation
         };
+
+        // Reset snapshots back to the initial state only
+        _snapshots = new List<GameState> { new GameState(State.localAeiSetPosition) { boardorientation = orientation } };
 
         // Clear any UI selection
         Selected = null;
@@ -188,6 +192,12 @@ public sealed class ArimaaGameService
     // Internal helper to raise StateChanged after successful state mutation
     private void OnStateMutated()
     {
+        // Append a new snapshot capturing the current state after mutation
+        if (_snapshots is not null)
+        {
+            var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
+            _snapshots.Add(new GameState(State.localAeiSetPosition) { boardorientation = orientation });
+        }
         StateChanged?.Invoke();
     }
 

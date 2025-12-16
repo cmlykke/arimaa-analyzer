@@ -97,6 +97,39 @@ public static class CorrectMoveService
     }
 
     /// <summary>
+    /// Compute the combined move notation and resulting AEI string from a list of snapshots
+    /// taken after each single-step user action. The list must contain at least two states,
+    /// where index 0 is the state when the node was loaded, and each subsequent index is the
+    /// updated state after one user step. Returns (notation, aei) or ("", "error") on failure.
+    /// </summary>
+    public static (string, string) ComputeMoveSequenceFromSnapshots(IReadOnlyList<GameState> snapshots)
+    {
+        if (snapshots == null || snapshots.Count < 2)
+            return ("", "error");
+
+        var parts = new List<string>(snapshots.Count - 1);
+        string lastAei = snapshots[0].localAeiSetPosition;
+
+        for (int i = 0; i < snapshots.Count - 1; i++)
+        {
+            var before = snapshots[i];
+            var after = snapshots[i + 1];
+            if (before is null || after is null)
+                return ("", "error");
+
+            var (notation, aei) = ComputeMoveSequence(before, after);
+            if (string.IsNullOrWhiteSpace(notation) || aei == "error")
+                return ("", "error");
+
+            parts.Add(notation);
+            lastAei = aei;
+        }
+
+        var combined = string.Join(" ", parts);
+        return (combined, lastAei);
+    }
+
+    /// <summary>
     /// Apply trap captures to the GameState using only AEI string operations.
     /// This method mutates the passed GameState by removing unsupported pieces from traps.
     /// </summary>
