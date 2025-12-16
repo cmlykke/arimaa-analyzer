@@ -9,6 +9,12 @@
     }
     else if (Game.CurrentNode.Children is { Count: > 0 } children)
     {
+        @if (!string.IsNullOrWhiteSpace(Game.PendingMoveText))
+        {
+            <div class="gtc-pending" title="Pending moves that can be reset or committed">
+                Pending: @Game.PendingMoveText
+            </div>
+        }
         @foreach (var child in children)
         {
             <div class="gtc-item">@string.Join(" ", child.Moves.ToArray())</div>
@@ -17,6 +23,12 @@
     else
     {
         <div class="gtc-empty">No children</div>
+        @if (!string.IsNullOrWhiteSpace(Game.PendingMoveText))
+        {
+            <div class="gtc-pending" title="Pending moves that can be reset or committed">
+                Pending: @Game.PendingMoveText
+            </div>
+        }
     }
 </div>
 
@@ -30,10 +42,16 @@
         if (Game is not null)
         {
             Game.CurrentNodeChanged += OnCurrentNodeChanged;
+            Game.StateChanged += OnStateChanged;
         }
     }
 
     private void OnCurrentNodeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnStateChanged()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -43,6 +61,7 @@
         if (Game is not null)
         {
             Game.CurrentNodeChanged -= OnCurrentNodeChanged;
+            Game.StateChanged -= OnStateChanged;
         }
     }
 }

@@ -47,6 +47,7 @@ public sealed class ArimaaGameService
         {
             // After a successful user move, apply trap captures via CorrectMoveService
             CorrectMoveService.ApplyTrapCaptures(State);
+            OnStateMutated();
         }
         return success;
     }
@@ -101,6 +102,18 @@ public sealed class ArimaaGameService
     // Alias for UI clarity: we can reset whenever we have uncommitted changes
     public bool CanResetPendingMoves => CanCommitMove;
 
+    // Human-readable notation of the pending move sequence (null when none)
+    public string? PendingMoveText
+    {
+        get
+        {
+            if (!CanResetPendingMoves || _snapshotAtLoad is null) return null;
+            var notation = CorrectMoveService.ComputeMoveSequence(_snapshotAtLoad, State);
+            if (string.IsNullOrWhiteSpace(notation.Item1) || notation.Item2 == "error") return null;
+            return notation.Item1;
+        }
+    }
+
     // Create a new non-mainline child node from the pending move(s) and move the current position to that child
     public bool CommitMove()
     {
@@ -150,6 +163,9 @@ public sealed class ArimaaGameService
 
         // Clear any UI selection
         Selected = null;
+
+        // Notify listeners that state (and thus pending moves) changed
+        StateChanged?.Invoke();
     }
 
     // Rotate the board orientation clockwise through the defined enum values
@@ -165,4 +181,15 @@ public sealed class ArimaaGameService
         };
         State.boardorientation = next;
     }
+
+    // Raised when the State changes without changing the CurrentNode (e.g., user makes or resets pending moves)
+    public event Action? StateChanged;
+
+    // Internal helper to raise StateChanged after successful state mutation
+    private void OnStateMutated()
+    {
+        StateChanged?.Invoke();
+    }
+
+    // (No other duplicate TryMove definitions)
 }
