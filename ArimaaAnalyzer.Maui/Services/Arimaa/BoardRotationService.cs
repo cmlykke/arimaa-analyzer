@@ -5,7 +5,8 @@ namespace ArimaaAnalyzer.Maui.Services.Arimaa;
 /// <summary>
 /// Helper utilities to map coordinates and rotate a 64-char board string
 /// between different <see cref="BoardOrientation"/> values. The canonical
-/// (normalized) orientation in code is treated as GoldWestSIlverEast.
+/// (normalized) orientation in code is treated as GoldSouthSilverNorth
+/// (i.e., Gold homebase at the bottom ranks 1–2, Silver at the top ranks 7–8).
 /// </summary>
 public static class BoardRotationService
 {
@@ -18,17 +19,20 @@ public static class BoardRotationService
     {
         return orientation switch
         {
-            // Display equals normalized
-            BoardOrientation.GoldWestSIlverEast => (row, col),
+            // Canonical orientation: display equals normalized
+            BoardOrientation.GoldSouthSilverNorth => (row, col),
 
-            // Display was produced by rotating normalized +90° CW -> invert by CCW
-            BoardOrientation.GoldNorthSilverSouth => (7 - col, row),
+            // Display was produced by rotating normalized 90° CCW (GoldWestSilverEast)
+            // Inverse mapping is 90° CW
+            BoardOrientation.GoldWestSIlverEast => (col, 7 - row),
 
-            // Display was produced by rotating normalized 180° -> invert is same
-            BoardOrientation.GoldEastSilverWest => (7 - row, 7 - col),
+            // Display was produced by rotating normalized 180° (GoldNorthSilverSouth)
+            // Inverse is the same
+            BoardOrientation.GoldNorthSilverSouth => (7 - row, 7 - col),
 
-            // Display was produced by rotating normalized +270° CW -> invert by +90° CW
-            BoardOrientation.GoldSouthSilverNorth => (col, 7 - row),
+            // Display was produced by rotating normalized 90° CW (GoldEastSilverWest)
+            // Inverse mapping is 90° CCW
+            BoardOrientation.GoldEastSilverWest => (7 - col, row),
 
             _ => (row, col)
         };
@@ -42,13 +46,14 @@ public static class BoardRotationService
     {
         return orientation switch
         {
-            BoardOrientation.GoldWestSIlverEast => (row, col),
-            // Apply +90° CW
-            BoardOrientation.GoldNorthSilverSouth => (col, 7 - row),
+            // Canonical orientation (identity)
+            BoardOrientation.GoldSouthSilverNorth => (row, col),
+            // Apply 90° CCW
+            BoardOrientation.GoldWestSIlverEast => (7 - col, row),
             // Apply 180°
-            BoardOrientation.GoldEastSilverWest => (7 - row, 7 - col),
-            // Apply +270° CW (i.e., 90° CCW)
-            BoardOrientation.GoldSouthSilverNorth => (7 - col, row),
+            BoardOrientation.GoldNorthSilverSouth => (7 - row, 7 - col),
+            // Apply 90° CW
+            BoardOrientation.GoldEastSilverWest => (col, 7 - row),
             _ => (row, col)
         };
     }
@@ -115,7 +120,7 @@ public static class BoardRotationService
 
     /// <summary>
     /// Build a 64-char display board string directly from an AEI string and the desired orientation.
-    /// Assumes the AEI board string is in the canonical normalized orientation (GoldWestSIlverEast).
+    /// Assumes the AEI board string is in the canonical normalized orientation (GoldSouthSilverNorth).
     /// </summary>
     public static string BuildDisplayBoard64(string aeiSetPosition, BoardOrientation orientation)
     {

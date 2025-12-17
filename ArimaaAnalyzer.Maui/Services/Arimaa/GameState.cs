@@ -34,18 +34,55 @@ public sealed class GameState
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(aeiSetPosition));
 
         // Validate and parse the AEI string
-        ValidateAndParseAei(aeiSetPosition, out var side, out var boardString);
+        ValidateAndParseAei(aeiSetPosition, out var side, out var _);
 
-        boardorientation = getBoardOrientationFromAEI(aeiSetPosition);
+        // Default orientation: Gold at bottom (south), Silver at top (north)
+        boardorientation = BoardOrientation.GoldSouthSilverNorth;
         SideToMove = side;
         _aeiSetPosition = aeiSetPosition;
     }
 
     public BoardOrientation getBoardOrientationFromAEI(string AEIstring)
     {
-        // Treat incoming AEI as already normalized with Gold homebase on the left
-        // (GoldWestSIlverEast). Orientation is a view concern.
-        return BoardOrientation.GoldWestSIlverEast;
+        // Try to infer orientation from the AEI payload.
+        // Heuristic: count Gold pieces (uppercase letters) in the top two ranks vs bottom two ranks.
+        // If more Gold are on the top, assume the AEI string is oriented GoldNorthSilverSouth; otherwise default to GoldSouthSilverNorth.
+        if (string.IsNullOrWhiteSpace(AEIstring))
+            return BoardOrientation.GoldSouthSilverNorth;
+
+        // Extract the quoted 64-char board payload
+        var trimmed = AEIstring.Trim();
+        var firstQuote = trimmed.IndexOf('"');
+        var lastQuote = trimmed.LastIndexOf('"');
+        if (firstQuote < 0 || lastQuote <= firstQuote)
+            return BoardOrientation.GoldSouthSilverNorth;
+
+        var payload = trimmed.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+        if (payload.Length != 64)
+            return BoardOrientation.GoldSouthSilverNorth;
+
+        int goldTop = 0;
+        int goldBottom = 0;
+
+        // Top two ranks: indices 0..15
+        for (int i = 0; i < 16; i++)
+        {
+            var ch = payload[i];
+            if (char.IsUpper(ch)) goldTop++;
+        }
+
+        // Bottom two ranks: indices 48..63
+        for (int i = 48; i < 64; i++)
+        {
+            var ch = payload[i];
+            if (char.IsUpper(ch)) goldBottom++;
+        }
+
+        // Decide orientation
+        if (goldTop > goldBottom)
+            return BoardOrientation.GoldNorthSilverSouth;
+
+        return BoardOrientation.GoldSouthSilverNorth;
     }
     
     /// <summary>
@@ -58,7 +95,8 @@ public sealed class GameState
         ValidateAndParseAei(node.AEIstring, out var side, out _);
         SideToMove = side;
         _aeiSetPosition = node.AEIstring;
-        boardorientation = getBoardOrientationFromAEI(node.AEIstring);;
+        // Ensure default view renders Gold at bottom before any user rotation
+        boardorientation = BoardOrientation.GoldSouthSilverNorth;
         var test = "test";
     }
 
@@ -189,7 +227,9 @@ public sealed class GameState
         if (firstQuote < 0 || lastQuote <= firstQuote || lastQuote - firstQuote - 1 != 64)
             return null;
 
-        return trimmed.Substring(firstQuote + 1, 64);
+        var aeiPayload = trimmed.Substring(firstQuote + 1, 64);
+        // AEI rows are south->north; convert to normalized top->bottom for internal use
+        return ConvertAeiToNormalized(aeiPayload);
     }
 
     /// <summary>
@@ -215,7 +255,9 @@ public sealed class GameState
             throw new ArgumentException("Board string must be exactly 64 characters.", nameof(newBoardString));
 
         var sideChar = SideToMove == Sides.Gold ? 'g' : 's';
-        localAeiSetPosition = $"setposition {sideChar} \"{newBoardString}\"";
+        // Convert internal normalized (top->bottom) to AEI order (south->north)
+        var aeiPayload = ConvertNormalizedToAei(newBoardString);
+        localAeiSetPosition = $"setposition {sideChar} \"{aeiPayload}\"";
     }
 
     private static void ValidateAndParseAei(string aeiSetPosition, out Sides side, out string boardString)
@@ -244,6 +286,38 @@ public sealed class GameState
         boardString = rest.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
         if (boardString.Length != 64)
             throw new ArgumentException("Board string must be exactly 64 characters.", nameof(aeiSetPosition));
+    }
+
+    // Convert AEI board (south->north ranks) into normalized internal order (top/north at row 0)
+    private static string ConvertAeiToNormalized(string aeiBoard64)
+    {
+        if (aeiBoard64.Length != 64) throw new ArgumentException("Board string must be exactly 64 characters.", nameof(aeiBoard64));
+        var result = new char[64];
+        for (int r = 0; r < 8; r++)
+        {
+            var srcRow = 7 - r; // AEI rank index -> normalized row
+            for (int c = 0; c < 8; c++)
+            {
+                result[r * 8 + c] = aeiBoard64[srcRow * 8 + c];
+            }
+        }
+        return new string(result);
+    }
+
+    // Convert normalized (top->bottom) to AEI (south->north)
+    private static string ConvertNormalizedToAei(string normalizedBoard64)
+    {
+        if (normalizedBoard64.Length != 64) throw new ArgumentException("Board string must be exactly 64 characters.", nameof(normalizedBoard64));
+        var result = new char[64];
+        for (int r = 0; r < 8; r++)
+        {
+            var dstRow = 7 - r; // normalized row -> AEI rank index
+            for (int c = 0; c < 8; c++)
+            {
+                result[dstRow * 8 + c] = normalizedBoard64[r * 8 + c];
+            }
+        }
+        return new string(result);
     }
 
     private static Piece? CharToPiece(char ch)

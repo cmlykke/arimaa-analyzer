@@ -61,7 +61,8 @@ public sealed class ArimaaGameService
         if (node == null) throw new ArgumentNullException(nameof(node));
         CurrentNode = node;
         // Preserve current board orientation across loads so UI rotation stays consistent
-        var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
+        // Default to canonical orientation: GoldSouth (bottom) vs SilverNorth (top)
+        var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
         State = new GameState(node);
         State.boardorientation = orientation;
         // Initialize snapshots for pending-move computation (index 0 = loaded state)
@@ -156,7 +157,7 @@ public sealed class ArimaaGameService
         if (CurrentNode is null || _snapshots is null || _snapshots.Count == 0) return;
 
         // Preserve current orientation while restoring the loaded snapshot
-        var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
+        var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
         State = new GameState(_snapshots[0].localAeiSetPosition)
         {
             boardorientation = orientation
@@ -195,7 +196,7 @@ public sealed class ArimaaGameService
         // Append a new snapshot capturing the current state after mutation
         if (_snapshots is not null)
         {
-            var orientation = State?.boardorientation ?? BoardOrientation.GoldWestSIlverEast;
+            var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
             _snapshots.Add(new GameState(State.localAeiSetPosition) { boardorientation = orientation });
         }
         StateChanged?.Invoke();
