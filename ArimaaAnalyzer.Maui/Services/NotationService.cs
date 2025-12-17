@@ -98,7 +98,7 @@ public static class NotationService
             .Where(l => !string.IsNullOrWhiteSpace(l));
 
         // Step 4: Parse each line normally
-        var regex = new Regex(@"^(\d+)([wb])\s+(.*)$", RegexOptions.Compiled);
+        var regex = new Regex(@"^(\d+)([wbgs])\s+(.*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         string currentAei = NotationService.BoardToAei(NotationService.InitializeEmptyBoard(), Sides.Gold);
         root = new GameTurn(currentAei, currentAei, "0", Sides.Silver, Array.Empty<string>(), isMainLine: true);
@@ -159,7 +159,7 @@ public static class NotationService
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             // Match move number + side: e.g., "1w", "41w", "1b"
-            var sideMatch = System.Text.RegularExpressions.Regex.Match(line, @"^\d+[wb]");
+            var sideMatch = System.Text.RegularExpressions.Regex.Match(line, @"^\d+[wbgs]", RegexOptions.IgnoreCase);
             if (!sideMatch.Success) continue;
             
             char code = sideMatch.Value[^1]; // last char: 'g' or 's'
@@ -236,10 +236,12 @@ public static class NotationService
 
             // Compute target
             int dr = 0, dc = 0;
-            switch (dirChar)
+            switch (char.ToLowerInvariant(dirChar))
             {
-                case 'n': dr = -1; break;
-                case 's': dr = 1; break;
+                // With rank '1' at bottom (row 0) and rank '8' at top (row 7),
+                // moving north increases the row index, south decreases it.
+                case 'n': dr = 1; break;
+                case 's': dr = -1; break;
                 case 'e': dc = 1; break;
                 case 'w': dc = -1; break;
             }

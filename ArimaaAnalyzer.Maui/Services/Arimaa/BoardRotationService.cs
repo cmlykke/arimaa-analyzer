@@ -24,7 +24,7 @@ public static class BoardRotationService
 
             // Display was produced by rotating normalized 90° CCW (GoldWestSilverEast)
             // Inverse mapping is 90° CW
-            BoardOrientation.GoldWestSIlverEast => (col, 7 - row),
+            BoardOrientation.GoldWestSilverEast => (col, 7 - row),
 
             // Display was produced by rotating normalized 180° (GoldNorthSilverSouth)
             // Inverse is the same
@@ -49,7 +49,7 @@ public static class BoardRotationService
             // Canonical orientation (identity)
             BoardOrientation.GoldSouthSilverNorth => (row, col),
             // Apply 90° CCW
-            BoardOrientation.GoldWestSIlverEast => (7 - col, row),
+            BoardOrientation.GoldWestSilverEast => (7 - col, row),
             // Apply 180°
             BoardOrientation.GoldNorthSilverSouth => (7 - row, 7 - col),
             // Apply 90° CW
@@ -73,7 +73,7 @@ public static class BoardRotationService
     /// <summary>
     /// Rotate a board string from one orientation to another, returning a new 64-char string.
     /// Both <paramref name="from"/> and <paramref name="to"/> are relative to the normalized
-    /// definition GoldWestSIlverEast.
+    /// definition GoldSouthSilverNorth.
     /// </summary>
     public static string RotateBoardString(string board64, BoardOrientation from, BoardOrientation to)
     {

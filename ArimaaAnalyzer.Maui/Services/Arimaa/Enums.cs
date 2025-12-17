@@ -3,7 +3,7 @@
 public enum BoardOrientation
 {
     GoldSouthSilverNorth,
-    GoldWestSIlverEast,
+    GoldWestSilverEast,
     GoldNorthSilverSouth,
     GoldEastSilverWest
 }

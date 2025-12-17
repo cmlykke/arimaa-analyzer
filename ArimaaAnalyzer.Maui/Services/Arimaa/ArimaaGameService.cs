@@ -177,10 +177,10 @@ public sealed class ArimaaGameService
     public void RotateBoardClockwise()
     {
         var current = State.boardorientation;
-        var next = current switch
+        BoardOrientation next = current switch
         {
-            BoardOrientation.GoldSouthSilverNorth => BoardOrientation.GoldWestSIlverEast,
-            BoardOrientation.GoldWestSIlverEast => BoardOrientation.GoldNorthSilverSouth,
+            BoardOrientation.GoldSouthSilverNorth => BoardOrientation.GoldWestSilverEast,
+            BoardOrientation.GoldWestSilverEast => BoardOrientation.GoldNorthSilverSouth,
             BoardOrientation.GoldNorthSilverSouth => BoardOrientation.GoldEastSilverWest,
             _ => BoardOrientation.GoldSouthSilverNorth
         };
