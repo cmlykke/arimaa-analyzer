@@ -66,6 +66,13 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  /* Make all outer-UI buttons at least one inner square in both dimensions */
+  min-width: calc(var(--inner-size) / 8);
+  min-height: calc(var(--inner-size) / 8);
+  /* Center content within the larger clickable square */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Compact ASCII-icon look */
