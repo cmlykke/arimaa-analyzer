@@ -5,13 +5,16 @@
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
 
-@{
+@{ 
     // Define a fixed outer size based on settings (8 squares * SquareSizePx)
     var outerSizePx = (int)(EffectiveSettings.SquareSizePx * 8);
+    // Define a fixed inner size. When outer UI is shown, use the pre-calculated
+    // InnerSquareSizePx so there is a consistent margin for the side buttons.
+    var innerSizePx = (int)((EffectiveShowOuterUi ? EffectiveSettings.InnerSquareSizePx : EffectiveSettings.SquareSizePx) * 8);
 }
 
 <div class="board-outer @(EffectiveShowOuterUi ? "outer-ui-on" : "outer-ui-off")"
-     style="--outer-size:@(outerSizePx)px;">
+     style="--outer-size:@(outerSizePx)px; --inner-size:@(innerSizePx)px;">
     @if (EffectiveShowOuterUi)
     {
         <div class="outer-top">

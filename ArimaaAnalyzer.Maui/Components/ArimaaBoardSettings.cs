@@ -11,6 +11,22 @@ public class ArimaaBoardSettings
     /// </summary>
     public int SquareSizePx { get; set; } = 56;
 
+    private int? _innerSquareSizePx;
+
+    /// <summary>
+    /// Size of each square in pixels when the Outer UI is shown (inner board).
+    /// Default is chosen so that: left button column (1 inner square) +
+    /// inner board (8 inner squares) + right button column (1 inner square)
+    /// has the same total width as the full-size outer board (8 * SquareSizePx).
+    /// That is, 10 * InnerSquareSizePx == 8 * SquareSizePx =>
+    /// InnerSquareSizePx = 0.8 * SquareSizePx.
+    /// </summary>
+    public int InnerSquareSizePx
+    {
+        get => _innerSquareSizePx ?? Math.Max(1, (SquareSizePx * 4) / 5);
+        set => _innerSquareSizePx = value;
+    }
+
     /// <summary>
     /// Size of piece images in pixels.
     /// </summary>

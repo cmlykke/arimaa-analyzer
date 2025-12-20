@@ -2,6 +2,7 @@
 .board-outer {
   /* Outer container sizing */
   --outer-size: 448px;
+  --inner-size: var(--outer-size);
   width: min(var(--outer-size), 100%, calc(100vh - env(safe-area-inset-top) - 4.5rem));
   height: auto;
 
@@ -39,6 +40,9 @@
   gap: var(--outer-gap);
   /* Allow the center band to shrink when vertical space is tight */
   min-height: 0;
+  /* Lock the working width so toggling UI doesn't shift horizontally */
+  width: var(--outer-size);
+  margin: 0 auto; /* keep centered within the outer container */
 }
 
 .outer-left,
@@ -46,6 +50,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--outer-gap);
+  /* Fix side column width to one inner square, so left + board + right == outer width */
+  flex: 0 0 calc(var(--inner-size) / 8);
+  width: calc(var(--inner-size) / 8);
 }
 
 .outer-btn {
@@ -55,6 +62,10 @@
   border: 1px solid #888;
   border-radius: 4px;
   background: #f7f7f7;
+  /* Ensure buttons fit inside the fixed side column width */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Compact ASCII-icon look */
@@ -75,15 +86,10 @@
   display: block;
   border: 2px solid #333;
   touch-action: none; /* prevent scroll on touch */
-  /* Fit within center cell; keep square shape, shrink if needed */
-  /* Prevent flex growth from stretching width beyond the square */
+  /* Fixed square size driven by settings via --inner-size */
   flex: 0 0 auto;
-  /* Fallback: fill available width, keep square, limit by container height */
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1 / 1;
-  max-width: 100%;
-  max-height: 100%;
+  width: var(--inner-size);
+  height: var(--inner-size);
   box-sizing: border-box;
   align-self: center;
 }
