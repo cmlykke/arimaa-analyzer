@@ -98,7 +98,7 @@
     @if (EffectiveShowOuterUi)
     {
         <div class="outer-bottom">
-            <span class="outer-caption" title="Outer UI enabled">UI</span>
+            <span class="outer-caption" title="@CurrentTurnCaption">@CurrentTurnCaption</span>
         </div>
     }
 </div>
@@ -187,4 +187,11 @@
         }
         _selectedPos = null;
     }
+
+    // Displays the move number and the moves that led to the current position
+    // Example: "12 Rc3n Hb4e". Falls back to "UI" when no node is loaded.
+    private string CurrentTurnCaption
+        => Game?.CurrentNode is { } node
+            ? ($"{node.MoveNumber} {string.Join(" ", node.Moves ?? System.Array.Empty<string>())}" ).Trim()
+            : "UI";
 }
