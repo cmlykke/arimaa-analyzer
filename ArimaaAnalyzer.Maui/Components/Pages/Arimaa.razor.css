@@ -1,0 +1,82 @@
+﻿.arimaa-page {
+  display: grid;
+  /* Make the aside flexible so it can grow on wide screens and fit more mini boards */
+  grid-template-columns: 1fr clamp(280px, 34vw, 640px); /* main area + flexible side pane */
+  gap: 16px;
+  align-items: start;
+}
+
+.mini-boards {
+  /* On wide screens this sits in the left column */
+}
+
+.mini-title {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: var(--text-color, #444);
+}
+
+.mini-boards-grid {
+  display: grid;
+  /* Never create columns smaller than a Tiny board (192px).
+     Use auto-fit so extra tracks collapse instead of forcing overflow. */
+  grid-template-columns: repeat(auto-fit, minmax(192px, 1fr));
+  gap: 12px;
+  /* prevent items from visually stacking/overlapping by ensuring row packing */
+  grid-auto-flow: row dense;
+  align-content: start;
+}
+
+.main-area {
+  /* Main gameplay area */
+}
+
+/* Make the compact boards truly compact inside the mini area to avoid overlap */
+.mini-boards ::deep .board-outer {
+  /* shrink the entire board footprint */
+  /* Tiny board should be exactly 8 * 24px = 192px on each side */
+  --outer-size: 192px;
+  --inner-size: 192px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Ensure inner layout doesn't force a fixed width larger than its container */
+.mini-boards ::deep .outer-main {
+  width: 100%;
+}
+
+/* Optional: hide outer UI chrome around mini boards to save space */
+.mini-boards ::deep .outer-top,
+.mini-boards ::deep .outer-bottom,
+.mini-boards ::deep .outer-left,
+.mini-boards ::deep .outer-right {
+  display: none;
+}
+
+/* Make sure each grid child can shrink within its track and not overflow */
+.mini-boards-grid > * {
+  min-width: 0;
+}
+
+/* On narrow/tall layouts, stack vertically with the mini boards below the main area */
+@media (max-width: 900px) {
+  .arimaa-page {
+    grid-template-columns: 1fr;
+  }
+
+  .main-area {
+    order: 1;
+  }
+
+  .mini-boards {
+    order: 2;
+  }
+}
+
+/* On very small screens, hide the aside completely (not enough space) */
+@media (max-width: 600px) {
+  .mini-boards {
+    display: none;
+  }
+}

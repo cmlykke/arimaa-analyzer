@@ -3,11 +3,30 @@
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Components
 @using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
 
 <div class="arimaa-page">
-    <ArimaaBoard Game="DemoGame" BoardSettings="PageBoardSettings" />
-    <GameTurnChildren Game="DemoGame" />
+    <!-- Main game area -->
+    <section class="main-area" aria-label="Main game">
+        <ArimaaBoard Game="DemoGame" BoardSettings="PageBoardSettings" />
+        <GameTurnChildren Game="DemoGame" />
+    </section>
     
+    <!-- Analysis/side section with smaller boards. Will appear to the left on wide layouts,
+     <ArimaaBoard Game="DemoGame" BoardSettings="@ArimaaBoardSettings.Compact"/>
+            <ArimaaBoard Game="DemoGame" BoardSettings="@ArimaaBoardSettings.Tiny"/>
+         and below on narrow/tall layouts via Arimaa.razor.css -->
+    <aside class="mini-boards" aria-label="Additional analysis boards">
+        <h3 class="mini-title">Analysis Boards</h3>
+        <div class="mini-boards-grid" @ref="_miniGridRef">
+            @for (var i = 0; i < _miniBoardCount; i++)
+            {
+                <ArimaaBoard Game="DemoGame" BoardSettings="@ArimaaBoardSettings.Tiny" />
+            }
+        </div>
+    </aside>
+
 </div>
 
 @code {
@@ -30,6 +49,65 @@
     // this page consumes them without owning the instance.
     [CascadingParameter]
     private ArimaaBoardSettings PageBoardSettings { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime JS { get; set; } = default!;
+
+    private ElementReference _miniGridRef;
+    private int _miniBoardCount = 0; // computed dynamically
+    private DotNetObjectReference<Arimaa>? _dotNetRef;
+    private IJSObjectReference? _module;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/miniBoards.js");
+            // Dimensions should match the CSS mini tile sizing in Arimaa.razor.css
+            // Tiny board is exactly 8 * 24px = 192px square (border drawn via box-shadow, not size)
+            var tileW = 192; // px
+            var tileH = 192; // px
+            var gap = 12;    // px (matches .mini-boards-grid gap)
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("observe", _miniGridRef, _dotNetRef, tileW, tileH, gap, null);
+            }
+        }
+    }
+
+    [JSInvokable]
+    public Task SetMiniBoardCount(int count)
+    {
+        if (count < 0) count = 0;
+        if (_miniBoardCount != count)
+        {
+            _miniBoardCount = count;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_miniGridRef.Context != null)
+            {
+                if (_module is not null)
+                {
+                    await _module.InvokeVoidAsync("disconnect", _miniGridRef);
+                }
+            }
+        }
+        catch { /* ignore on shutdown */ }
+        _dotNetRef?.Dispose();
+        if (_module is not null)
+        {
+            try { await _module.DisposeAsync(); } catch { }
+            _module = null;
+        }
+    }
 
 
     private static string Game_base = @"1w Ra1 Rb1 Rc1 Dd1 Re1 Rf1 Rg1 Rh1 Ca2 Mb2 Rc2 Ed2 De2 Cf2 Hg2 Hh2\n1b ee7 mg7 hb7 hh7 dd7 de8 ca7 cg8 rc7 rf7 ra8 rb8 rc8 rd8 rf8 rh8\n2w Hg2n Hh2n Ed2n Ed3e\n2b ee7s ee6s ee5s hh7s\n3w Ee3e Ef3n Dd1n Ca2n\n3b ee4s ee3w De2n de8s\n4w Ef4w De3s Rc1e Mb2n\n4b ed3n Dd2n hb7s ca7e\n5w De2n Dd3s Ra1n Mb3s\n5b ed4s dd7s dd6w dc6s\n6w De3s Mb2n Ee4w Ed4w\n6b hb6e dc5w db5n mg7s\n7w Ec4e Rc2w Dd2w Rd1w\n7b ed3e ee3n De2n rh8s\n8w Cf2n De3s Cf3s Rh1n\n8b ee4e ef4e eg4e Hg3n\n9w Ed4e Ee4e Ef4n Ef5e\n9b Hg4w eh4w hc6e hh6s\n10w Eg5w Hf4s Ef5e De2n\n10b eg4w ef4w ee4e De3n\n11w Hf3e Eg5w Ef5w De4s\n11b ef4w hh5s De3w ee4s\n12w Dc2e Dd3w Rc1n Ee5e\n12b ee3s ee2n Re1n cg8s\n13w Ca3n Mb3n Ef5s Ef4e\n13b mg6s ee3w Re2n db6w\n14w mg5w Eg4n mf5s Eg5w\n14b ed3n ed4e mf4e mg4n\n15w Dc3n Dd2n Ef5w mg5w\n15b ee4w Re3n Re4e ed4e\n16w Ee5n mf5w me5w Ee6s\n16b md5w mc5n Dc4n hh4w\n17w Ee5n Mb4n Mb5n Hh3n\n17b hg4n hg5n Dc5s mc6s\n18w Dd3n Dc4w hd6n Ee6w\n18b ee4n ee5w mc5n ed5w\n19w Db4n Db5w Mb6s Mb5s\n19b mc6w ec5e ed5e ee5s\n20w Mb4e Dd4n Dd5w Rg1n\n20b Rf4n ee4e Rf5n Rf6x ef4n\n21w Ed6w mb6s Ec6w Hh4w\n21b ef5w ee5w Dc5n ed5w\n22w Ca4e Mc4e Md4e Me4e\n22b Cb4w mb5s hd7s rd8s\n23w Mf4n Mf5e hg6w Mg5n\n23b ec5e ed5e ee5e ef5e\n24w Dc6s Eb6s Dc5s Hg4e\n24b hd6w hc6s rd7s hf6w\n25w Rc2n Rb2e Dc4e Rc3e\n25b rd6s hc5s hc4n Dd4w\n26w mb4s Eb5s Dc4e Eb4e\n26b mb3s Ra2n mb2w hc5n\n27w Dd4e De4e Df4n Ec4e\n27b Mg6w eg5n hc6e rd5e\n28w Ed4w Ec4w Eb4s Eb3s\n28b eg6s eg5s Df5e Mf6x eg4w\n29w Eb2n ma2e Cf2w Rf1n\n29b ef4w ee4s Rd3w ee3w\n30w Hg3n Hg4w Hf4w Rg2n\n30b he6e hf6s Dg5n hf5e\n31w Hh4w Hg4w Hf4n Rh2n\n31b ed3n He4s ed4e ee4e\n32w Rc3e He3n Ce2n Rh3n\n32b Hf5n ef4n hg5s Dg6s Hf6x\n33w Eb3e mb2n Ec3n mb3e mc3x\n33b re5w ef5s He4n ef4w\n34w Ec4e rd5w Ed4n Ra3e\n34b He5e ee4n Hf5n Hf6x ee5e\n35w Ed5e hd6s hd5s Ee5w\n35b ef5s ef4w hd4w hc4w\n36w rc5s Ed5w rc4s rc3x Ec5s\n36b da6e db6s Ca4s hb4w\n37w Ec4w db5e Eb4n Rb1e\n37b ee4w ed4w de7s de6w\n38w dc5n Eb5e Ec5e Ed5e\n38b Dg5n hg4n Dg6w Df6x hg5n\n39w Ee5e Ef5e Eg5w hg6s\n39b ec4e dc6s Da5n ha4n\n40w Rh4n hg5s Ef5e Rh5n\n40b ed4e ee4e hg4e dc5e\n41w Eg5n cg7n Eg6n Rc1e\n41b ef4n ef5e eg5n dd6e\n42w rf7s Eg7w Ef7w Ee7w\n42b Da6e ha5n Db6e Dc6x ha6e\n43w Ed7s dd5s Ed6s Ca3n\n43b rf6s rf5e rg5s hh4s\n44w Ce3e Rf2e Cf3s Rd1e\n44b hh3s rg4e rh4s cg8s\n45w Re1e Rf1e Rg1e Rc2e\n45b eg6s eg5s eg4w Rg3n\n46w Rd3e Ca4e dd4s Ed5s\n46b rh3w ef4s Cf2w ef3s\n47w Ed4n Ed5n de6e df6x Ed6e\n47b ef2n Rg2w rg3s ef3x rg2s"; 
