@@ -15,6 +15,7 @@ public class AnalysisServiceTests
 {
     // Example: use IAsyncLifetime if you later want shared setup/teardown.
     // public class AnalysisServiceFixture : IAsyncLifetime { ... }
+    private static readonly string ExePath = Path.Combine(AppContext.BaseDirectory, "Aiexecutables", "sharp2015.exe");
 
     [Fact(DisplayName = "AnalysisService can be instantiated" )]
     public void CanCreateInstance()
@@ -44,16 +45,16 @@ public class AnalysisServiceTests
                         "isready, setoption, setposition, go (expects bestmove)")]
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest()
     {
-        // Absolute path provided by user
-        var exePath = @"C:\\Users\\hjlyk\\RiderProjects\\arimaa-analyzer\\ArimaaAnalyzer.Maui\\Aiexecutables\\sharp2015.exe";
-
-        if (!File.Exists(exePath))
+        
+        Console.WriteLine("Test best move 1");
+        
+        if (!File.Exists(ExePath))
         {
             // Can't truly mark as Skipped here without adding a conditional Fact or extra packages.
             // Treat as a no-op pass with a helpful message.
             Console.WriteLine($"[SKIP] Engine executable not found at " +
-                              $"'{exePath}'. Place sharp2015.exe there to run this test.");
-            return;
+                              $"'{ExePath}'. Place sharp2015.exe there to run this test.");
+            false.Should().BeTrue("Test should fail if an Arimaa AI is not found");
         }
 
         await using var svc = new AnalysisService();
@@ -61,7 +62,7 @@ public class AnalysisServiceTests
         {
             // Start the engine with the 'aei' argument
             // (matches Python helper) and the service will also send 'aei' over stdin
-            await svc.StartAsync(exePath, arguments: "aei");
+            await svc.StartAsync(ExePath, arguments: "aei");
 
             // Ensure engine is ready
             await svc.IsReadyAsync();
@@ -95,6 +96,8 @@ public class AnalysisServiceTests
             best.Should().NotBeNullOrWhiteSpace(
                 "engine should return a bestmove sequence");
 
+            Console.WriteLine("Test best move");
+            
             // Validate our parsing matches the engine's raw line by reconstructing expected sequence
             best.Should().MatchRegex(
                 @"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
