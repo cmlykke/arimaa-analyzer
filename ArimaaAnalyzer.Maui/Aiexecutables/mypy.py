@@ -9,12 +9,13 @@ def enqueue_output(stream, q):
     stream.close()
 
 # --- Start the engine ---
-
-engine = subprocess.Popen( ["./sharp2015.exe", "aei"],     # use your engine's executable
+# On Windows, use "sharp2015.exe"; full path if not in current dir
+engine = subprocess.Popen(
+    ["sharp2015.exe", "aei"],  # Launch in AEI mode with arg
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
-    bufsize=1,
+    bufsize=-1,  # Use system default buffering to avoid warnings
 )
 
 # Queue to collect output
@@ -27,20 +28,33 @@ def send(cmd):
     engine.stdin.write((cmd + "\n").encode("utf-8"))
     engine.stdin.flush()
 
-# --- Dummy position (same as before) ---
+# --- Initiate AEI mode with protocol start ---
+send("aei")  # Send "aei" to trigger handshake
 
-send("position 1w")
-send("setup")
-send("  r r r r r r r r")
-send("  h c d m e d c h")
-send("  . . . . . . . .")
-send("  . . . . . . . .")
-send("  . . . . . . . .")
-send("  . . . . . . . .")
-send("  H C D M E D C H")
-send("  R R R R R R R R")
-send("end")
+# --- Wait for "aeiok" (engine sends protocol-version, id lines first) ---
+while True:
+    line = q.get()
+    print("ENGINE:", line)
+    if line.strip() == "aeiok":
+        break
 
+send("isready")
+
+# Wait for "readyok"
+while True:
+    line = q.get()
+    print("ENGINE:", line)
+    if line.strip() == "readyok":
+        break
+
+send("newgame")
+
+# --- Set initial position using standard AEI format ---
+# Board string: Standard initial setup (symmetric: rrrrrrrr h c d m e d c h, etc.)
+send("setposition g [rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR]")
+
+# Optional: Set time limit to prevent indefinite waits (10 seconds per move)
+send("setoption name tcmove value 10")
 
 # Ask engine to compute a move
 send("go")

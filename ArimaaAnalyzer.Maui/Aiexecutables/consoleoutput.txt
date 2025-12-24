@@ -1,0 +1,15 @@
+PS C:\Users\USER\RiderProjects\arimaa-analyzer\ArimaaAnalyzer.Maui\Aiexecutables> python mypy.py
+ENGINE: protocol-version 1
+ENGINE: id name sharp
+ENGINE: id author lightvector
+ENGINE: id version 2015 (no_git_revision_recorded)
+ENGINE: aeiok
+ENGINE: readyok
+ENGINE: log Started new game
+ENGINE: log Position set
+ENGINE: log PerMove 10 (max 2.592e+06) Reserve current 60 Already used 0
+ENGINE: log Depth 14 Eval 300 Time 13.375 Seed 0cf9dc51b71a8afb
+ENGINE: bestmove Ee2n Ee3n Ee4n Ee5n
+
+Final engine move: bestmove Ee2n Ee3n Ee4n Ee5n
+PS C:\Users\USER\RiderProjects\arimaa-analyzer\ArimaaAnalyzer.Maui\Aiexecutables>
