@@ -15,11 +15,13 @@ public class AnalysisService : IAsyncDisposable
     private readonly SemaphoreSlim _ioLock = new(1, 1);
     // Increase timeout as some engines might take time to load neural nets or large tables
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
+    private readonly TimeSpan _searchTimeout = TimeSpan.FromSeconds(5);
     private Process? _process;
     private StreamWriter? _stdin;
     private StreamReader? _stdout;
     private readonly ConcurrentQueue<string> _stderrBuffer = new();
     private readonly List<string> _capabilities = new();
+    private readonly Dictionary<string, string> _currentOptionValues = new(StringComparer.OrdinalIgnoreCase);
 
     public string? EngineName { get; private set; }
     public string? EngineAuthor { get; private set; }
@@ -74,7 +76,7 @@ public class AnalysisService : IAsyncDisposable
         string? line;
         var optionRegex = new Regex("^option\\s+name\\s+(?<name>[^\\s]+)(?:\\s+type\\s+(?<type>[^\\s]+))?(?:\\s+default\\s+(?<def>.+))?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        while ((line = await ReadLineAsync(ct).ConfigureAwait(false)) != null)
+        while ((line = await ReadLineAsync(ct, _defaultTimeout).ConfigureAwait(false)) != null)
         {
             if (line.StartsWith("id name ", StringComparison.OrdinalIgnoreCase))
             {
@@ -111,7 +113,10 @@ public class AnalysisService : IAsyncDisposable
     /// Sends a setoption command. Value is sent as-is (no quoting added).
     /// </summary>
     public Task SetOptionAsync(string name, string value, CancellationToken ct = default)
-        => SendAsync($"setoption name {name} value {value}", ct);
+    {
+        _currentOptionValues[name] = value;
+        return SendAsync($"setoption name {name} value {value}", ct);
+    }
 
     /// <summary>
     /// Waits for the engine to finish initialization and be ready to accept commands.
@@ -120,7 +125,7 @@ public class AnalysisService : IAsyncDisposable
     {
         await SendAsync("isready", ct).ConfigureAwait(false);
         string? line;
-        while ((line = await ReadLineAsync(ct).ConfigureAwait(false)) != null)
+        while ((line = await ReadLineAsync(ct, _defaultTimeout).ConfigureAwait(false)) != null)
         {
             if (string.Equals(line, "readyok", StringComparison.OrdinalIgnoreCase))
                 return;
@@ -161,43 +166,86 @@ public class AnalysisService : IAsyncDisposable
         string? ponder = null;
         string? line;
         // Reading loop until bestmove is found.
-        // Note: A robust implementation might need a separate read loop/thread to handle 'info' lines asynchronously.
-        while ((line = await ReadLineAsync(ct).ConfigureAwait(false)) != null)
+        // Use an overall search timeout instead of a per-line timeout, since engines may be silent during search.
+        using var overallCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        overallCts.CancelAfter(GetSearchTimeout());
+        while (true)
         {
-            log.Add(line);
-            if (line.StartsWith("bestmove ", StringComparison.OrdinalIgnoreCase))
+            // Drain any pending stderr lines first, engines sometimes send important info there
+            while (_stderrBuffer.TryDequeue(out var errLine))
             {
-                // Typical formats seen in AEI engines:
-                // 1) bestmove <step1> <step2> <step3> <step4>
-                // 2) bestmove <step...> ponder <move>
-                // We want to capture the full move sequence after 'bestmove ' (until optional ' ponder ').
-                var afterKeyword = line.Substring("bestmove ".Length).Trim();
-                var ponderMarker = " ponder ";
-                var ponderIndex = afterKeyword.IndexOf(ponderMarker, StringComparison.OrdinalIgnoreCase);
-                if (ponderIndex >= 0)
-                {
-                    var bestSeq = afterKeyword.Substring(0, ponderIndex).Trim();
-                    var ponderPart = afterKeyword.Substring(ponderIndex + ponderMarker.Length).Trim();
-                    // Some engines may include extra tokens after ponder; we take the next token as the ponder move
-                    if (!string.IsNullOrWhiteSpace(ponderPart))
-                    {
-                        var spaceIdx = ponderPart.IndexOf(' ');
-                        ponder = spaceIdx > 0 ? ponderPart.Substring(0, spaceIdx) : ponderPart;
-                    }
-                    best = bestSeq;
-                }
-                else
-                {
-                    best = afterKeyword;
-                }
-                break;
+                log.Add($"[stderr] {errLine}");
+                if (TryParseBestmoveLine(errLine, out var b, out var p)) { best = b; ponder = p; break; }
             }
+            if (!string.IsNullOrEmpty(best))
+                break;
+
+            try
+            {
+                line = await ReadLineAsync(overallCts.Token, timeout: null).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                var sample = string.Join("\n", log.TakeLast(20));
+                throw new TimeoutException($"Engine did not return bestmove within {GetSearchTimeout().TotalSeconds:F1}s. Last output lines:\n{sample}");
+            }
+
+            if (line is null)
+                continue;
+
+            log.Add(line);
+            if (TryParseBestmoveLine(line, out var b2, out var p2)) { best = b2; ponder = p2; break; }
         }
 
         if (string.IsNullOrEmpty(best))
             throw new InvalidOperationException("Engine did not return bestmove.");
 
         return (best!, ponder, log);
+    }
+
+    private static bool TryParseBestmoveLine(string line, out string bestMove, out string? ponder)
+    {
+        bestMove = string.Empty;
+        ponder = null;
+        const string prefix = "bestmove ";
+        if (!line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Typical formats seen in AEI engines:
+        // 1) bestmove <step1> <step2> <step3> <step4>
+        // 2) bestmove <step...> ponder <move>
+        var afterKeyword = line.Substring(prefix.Length).Trim();
+        const string ponderMarker = " ponder ";
+        var ponderIndex = afterKeyword.IndexOf(ponderMarker, StringComparison.OrdinalIgnoreCase);
+        if (ponderIndex >= 0)
+        {
+            bestMove = afterKeyword.Substring(0, ponderIndex).Trim();
+            var ponderPart = afterKeyword.Substring(ponderIndex + ponderMarker.Length).Trim();
+            if (!string.IsNullOrWhiteSpace(ponderPart))
+            {
+                var spaceIdx = ponderPart.IndexOf(' ');
+                ponder = spaceIdx > 0 ? ponderPart.Substring(0, spaceIdx) : ponderPart;
+            }
+        }
+        else
+        {
+            bestMove = afterKeyword;
+        }
+        return !string.IsNullOrEmpty(bestMove);
+    }
+
+    private TimeSpan GetSearchTimeout()
+    {
+        // If caller set a per-move time via option 'tcmove', scale timeout accordingly.
+        if (_currentOptionValues.TryGetValue("tcmove", out var val) && int.TryParse(val, out var seconds) && seconds > 0)
+        {
+            // Allow generous slack over engine's per-move time because sharp2015 may exceed on the first move.
+            // 3x tcmove + 5s buffer, bounded below by baseline.
+            var dyn = TimeSpan.FromSeconds(seconds * 3 + 5);
+            // Ensure at least the baseline timeout
+            return dyn < _searchTimeout ? _searchTimeout : dyn;
+        }
+        return _searchTimeout;
     }
 
     public Task StopAsync(CancellationToken ct = default) => SendAsync("stop", ct);
@@ -223,28 +271,29 @@ public class AnalysisService : IAsyncDisposable
         }
     }
 
-    private async Task<string?> ReadLineAsync(CancellationToken ct)
+    private async Task<string?> ReadLineAsync(CancellationToken ct, TimeSpan? timeout = null)
     {
         if (_stdout is null) throw new InvalidOperationException("Engine stdout not available.");
 
-        // We use a linked token source so we can enforce a read timeout if the engine hangs
-        // Exception: If 'go infinite' is used, this logic needs to be adapted to wait indefinitely.
-        // For now, we assume standard command-response behavior.
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        // Do not cancel via timeout here for 'go' commands in a real app, logic should be split.
-        // But for handshake/isready, timeout is useful.
-        
         var readTask = _stdout.ReadLineAsync();
-        // Wait for read or cancellation
-        // Note: ReadLineAsync(CancellationToken) is not available in older .NET Standard, but OK in .NET 6+
-        // However, StreamReader.ReadLineAsync() usually doesn't take a token directly.
-        // We wrap it:
-        var completed = await Task.WhenAny(readTask, Task.Delay(Timeout.InfiniteTimeSpan, cts.Token)).ConfigureAwait(false);
-        
-        if (completed == readTask)
+        if (timeout is null || timeout.Value <= TimeSpan.Zero)
+        {
+            // No per-line timeout, but still respect cancellation.
+            var completed = await Task.WhenAny(readTask, Task.Delay(Timeout.InfiniteTimeSpan, ct)).ConfigureAwait(false);
+            if (completed == readTask)
+                return await readTask.ConfigureAwait(false);
+            // Cancellation requested
+            ct.ThrowIfCancellationRequested();
+            return null; // unreachable
+        }
+
+        var delayTask = Task.Delay(timeout.Value, ct);
+        var completedTimed = await Task.WhenAny(readTask, delayTask).ConfigureAwait(false);
+
+        if (completedTimed == readTask)
             return await readTask.ConfigureAwait(false);
-            
-        throw new TimeoutException("Timed out reading from engine.");
+
+        throw new TimeoutException($"Timed out reading from engine after {timeout.Value.TotalSeconds:F1}s.");
     }
 
     private void Cleanup()

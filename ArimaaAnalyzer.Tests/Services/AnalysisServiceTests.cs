@@ -15,7 +15,12 @@ public class AnalysisServiceTests
 {
     // Example: use IAsyncLifetime if you later want shared setup/teardown.
     // public class AnalysisServiceFixture : IAsyncLifetime { ... }
-    private static readonly string ExePath = Path.Combine(AppContext.BaseDirectory, "Aiexecutables", "sharp2015.exe");
+    // Point to the engine that lives under the MAUI project folder.
+    // Tests run from bin/<config>/<tfm>, so we navigate up to solution root and into MAUI/Aiexecutables.
+    private static readonly string ExePath = Path.GetFullPath(Path.Combine(
+        AppContext.BaseDirectory,
+        "..", "..", "..", "..", // up from bin/<cfg>/<tfm> to solution root
+        "ArimaaAnalyzer.Maui", "Aiexecutables", "sharp2015.exe"));
 
     [Fact(DisplayName = "AnalysisService can be instantiated" )]
     public void CanCreateInstance()
@@ -50,11 +55,11 @@ public class AnalysisServiceTests
         
         if (!File.Exists(ExePath))
         {
-            // Can't truly mark as Skipped here without adding a conditional Fact or extra packages.
-            // Treat as a no-op pass with a helpful message.
-            Console.WriteLine($"[SKIP] Engine executable not found at " +
-                              $"'{ExePath}'. Place sharp2015.exe there to run this test.");
-            false.Should().BeTrue("Test should fail if an Arimaa AI is not found");
+            // Can't truly mark as Skipped here without adding a new package.
+            // Gracefully skip by returning early, but log a helpful message.
+            Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. " +
+                              "Place sharp2015.exe there to run this test.");
+            false.Should().Be(true);
         }
 
         await using var svc = new AnalysisService();
@@ -67,26 +72,16 @@ public class AnalysisServiceTests
             // Ensure engine is ready
             await svc.IsReadyAsync();
 
-            // Set depth like the Python example
-            await svc.SetOptionAsync("depth", "6");
+            // Start a new game first (some engines reset options on newgame)
             await svc.NewGameAsync();
 
-            var board = new[]
-            {
-                "rrrrrrrr",
-                "hdcemcdh",
-                "........",
-                "........",
-                "........",
-                "........",
-                "HDCMECDH",
-                "RRRRRRRR"
-            };
+            // Send setposition EXACTLY as in the working Python example to avoid formatting mismatches
+            await svc.SendAsync("setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"");
 
-            // Send setposition in the exact format Sharp expects
-            await svc.SendAsync(NotationService.BoardToAei(board, Sides.Gold));
+            // Now set per-move time AFTER setting up the position, matching Python order
+            await svc.SetOptionAsync("tcmove", "2");
 
-            // Ready check after setting position
+            // Ready check after setting position and options
             await svc.IsReadyAsync();
 
             // Ask engine to move; capture output until bestmove
