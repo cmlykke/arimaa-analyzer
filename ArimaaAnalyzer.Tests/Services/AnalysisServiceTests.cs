@@ -102,4 +102,56 @@ public class AnalysisServiceTests
             await svc.QuitAsync();
         }
     }
+
+    [Fact(DisplayName = "BuildGameTurnTreeAsync throws on invalid args")]
+    public async Task BuildGameTurnTreeAsync_InvalidArgs()
+    {
+        await using var svc = new AnalysisService();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => svc.BuildGameTurnTreeAsync("", 1));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => svc.BuildGameTurnTreeAsync("setposition g \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"", 0));
+    }
+
+    [Fact(DisplayName = "BuildGameTurnTreeAsync builds a chain of requested depth when engine is available")]
+    public async Task BuildGameTurnTreeAsync_Chain_WhenEnginePresent()
+    {
+        if (!File.Exists(ExePath))
+        {
+            Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. Place sharp2015.exe there to run this test.");
+            false.Should().BeTrue();
+        }
+
+        await using var svc = new AnalysisService();
+        try
+        {
+            // Start engine
+            await svc.StartAsync(ExePath, arguments: "aei");
+
+            // Use the same AEI position as the smoke test
+            var aei = "setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
+            int depth = 2;
+
+            var root = await svc.BuildGameTurnTreeAsync(aei, depth);
+
+            // Verify chain length equals depth
+            int count = 0;
+            var node = root;
+            while (node is not null)
+            {
+                count++;
+                // minimal validations
+                node.Moves.Should().NotBeNull();
+                node.Moves.Count.Should().BeGreaterThan(0);
+                node.AEIstring.Should().NotBeNullOrWhiteSpace();
+                node.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+                node = node.Children.FirstOrDefault();
+            }
+            count.Should().Be(depth);
+        }
+        finally
+        {
+            await svc.QuitAsync();
+        }
+    }
+
 }

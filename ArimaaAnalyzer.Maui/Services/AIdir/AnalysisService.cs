@@ -313,6 +313,97 @@ public class AnalysisService : IAsyncDisposable
         _ioLock.Dispose();
         return ValueTask.CompletedTask;
     }
+
+    /// <summary>
+    /// Builds a linear main-line GameTurn tree by repeatedly asking the AEI engine for a best move.
+    /// The first returned node is the first move generated from the provided AEI position.
+    /// </summary>
+    /// <param name="aei">AEI position string, for example: <c>setposition g "..."</c>.</param>
+    /// <param name="searchDepth">Number of consecutive turns to generate. Must be greater than 0.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The root GameTurn node of the generated chain (depth nodes long).</returns>
+    public async Task<GameTurn> BuildGameTurnTreeAsync(string aei, int searchDepth, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(aei)) throw new ArgumentNullException(nameof(aei));
+        if (searchDepth <= 0) throw new ArgumentOutOfRangeException(nameof(searchDepth), "searchDepth must be > 0");
+
+        // Start engine if necessary (attempt to auto-resolve bundled path)
+        if (!IsRunning)
+        {
+            var exePath = ResolveSharp2015Path();
+            await StartAsync(exePath, arguments: "aei", ct: ct).ConfigureAwait(false);
+        }
+
+        await NewGameAsync(ct).ConfigureAwait(false);
+        await SendAsync(aei, ct).ConfigureAwait(false);
+        // Keep searches quick to avoid long test runs; ignore if engine doesn't support tcmove
+        try { await SetOptionAsync("tcmove", "2", ct).ConfigureAwait(false); } catch { }
+        await IsReadyAsync(ct).ConfigureAwait(false);
+
+        GameTurn? root = null;
+        GameTurn? tail = null;
+        string currentAei = aei;
+        int moveNumber = 1;
+
+        for (int i = 0; i < searchDepth; i++)
+        {
+            var (bestMove, _, _) = await GoAsync(string.Empty, ct).ConfigureAwait(false);
+            var moves = bestMove.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var side = ParseSideFromAei(currentAei);
+
+            var node = new GameTurn(
+                oldAEIstring: currentAei,
+                updatedAEIstring: string.Empty,
+                MoveNumber: moveNumber.ToString(),
+                Side: side,
+                Moves: moves,
+                isMainLine: false);
+
+            if (root is null)
+            {
+                root = node;
+            }
+            else
+            {
+                tail!.AddChild(node);
+            }
+            tail = node;
+
+            // Advance AEI and re-position engine for the next iteration
+            currentAei = NotationService.GamePlusMovesToAei(currentAei, moves);
+            await SendAsync(currentAei, ct).ConfigureAwait(false);
+            await IsReadyAsync(ct).ConfigureAwait(false);
+
+            moveNumber++;
+        }
+
+        return root!;
+    }
+
+    private static Sides ParseSideFromAei(string aei)
+    {
+        var idx = aei.IndexOf("setposition", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) throw new ArgumentException("Invalid AEI: missing 'setposition'.");
+        var after = aei.Substring(idx + "setposition".Length).TrimStart();
+        if (after.Length == 0) throw new ArgumentException("Invalid AEI: missing side code.");
+        var sideCode = after[0];
+        return sideCode is 'g' or 'G' ? Sides.Gold
+             : sideCode is 's' or 'S' ? Sides.Silver
+             : throw new ArgumentException($"Invalid AEI side code: {sideCode}");
+    }
+
+    private static string ResolveSharp2015Path()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = System.IO.Path.Combine(baseDir, "Aiexecutables", "sharp2015.exe");
+        if (System.IO.File.Exists(candidate)) return candidate;
+
+        var candidate2 = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+            baseDir, "..", "..", "..", "..", "ArimaaAnalyzer.Maui", "Aiexecutables", "sharp2015.exe"));
+        if (System.IO.File.Exists(candidate2)) return candidate2;
+
+        throw new FileNotFoundException("Could not locate sharp2015.exe under Aiexecutables.");
+    }
 }
 
 public record AeiOption(string Name, string Type, string? DefaultValue);
