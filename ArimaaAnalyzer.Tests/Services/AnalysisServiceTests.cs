@@ -58,7 +58,9 @@ public class AnalysisServiceTests
             bestMoveRegex: @"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
     }
     
-    [Fact(DisplayName = "Sharp2015 AEI smoke test from the silver perspective.")]
+    [Fact( 
+        DisplayName = "Sharp2015 AEI smoke test from the silver perspective.", 
+        Skip = "This test is temporarily disabled because sharp2015 can't make silver moves" )]
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest_silverToPlay()
     {
         var aei = $"setposition s \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
