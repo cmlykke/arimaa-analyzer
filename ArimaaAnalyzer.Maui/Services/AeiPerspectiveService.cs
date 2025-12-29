@@ -94,6 +94,77 @@ public static class AeiPerspectiveService
         return new string(buffer);
     }
 
+    /// <summary>
+    /// Converts a gold-formatted move string into the equivalent silver-formatted move string.
+    /// - Swaps piece letter case (gold pieces upper -> lower; silver lower -> upper).
+    /// - Mirrors ranks using r' = 9 - r (so 1 <-> 8, 2 <-> 7, ...).
+    /// - Inverts vertical directions: 'n' <-> 's'. Horizontal 'e'/'w' stay the same.
+    /// - Tokens are expected to be space-separated and shaped like:
+    ///   "Pfr" (setup/placement) or "Pfrd" (single step), where
+    ///   P = piece letter, f = file a-h, r = rank 1-8, d = direction n/s/e/w.
+    ///   Any token not matching this pattern is returned unchanged.
+    /// This supports pushes and pulls naturally as they are just sequences of such tokens.
+    /// </summary>
+    /// <param name="goldMove">Gold-looking move string, e.g., "Ea2n Ea3n Ea4n Ea5n".</param>
+    /// <returns>Silver-formatted move string, e.g., "ea7s ea6s ea5s ea4s".</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="goldMove"/> is null or empty.</exception>
+    public static string ConvertGoldMoveToSilver(string goldMove)
+    {
+        if (string.IsNullOrWhiteSpace(goldMove))
+            throw new ArgumentException("Move string is null or empty.", nameof(goldMove));
+
+        // Regex for tokens like Pfr or Pfrd
+        // Group1 = piece [A-Za-z], Group2 = file [a-hA-H], Group3 = rank [1-8], Group4 = optional dir [nsewNSEW]
+        var tokenRegex = new Regex("^([A-Za-z])([a-hA-H])([1-8])([nsewNSEW])?$", RegexOptions.Compiled);
+
+        string TransformToken(string tok)
+        {
+            if (string.IsNullOrWhiteSpace(tok)) return tok;
+
+            var m = tokenRegex.Match(tok);
+            if (!m.Success)
+                return tok; // leave unknown tokens as-is
+
+            char piece = m.Groups[1].Value[0];
+            char file = char.ToLowerInvariant(m.Groups[2].Value[0]); // normalize file letter lower
+            char rankCh = m.Groups[3].Value[0];
+            char? dir = m.Groups[4].Success ? m.Groups[4].Value[0] : (char?)null;
+
+            // Swap case of the piece letter
+            piece = char.IsUpper(piece) ? char.ToLowerInvariant(piece) : char.ToUpperInvariant(piece);
+
+            // Mirror rank: r' = 9 - r
+            int rank = rankCh - '0';
+            int mirrored = 9 - rank; // 1<->8, 2<->7, ...
+            char mirroredRank = (char)('0' + mirrored);
+
+            // Transform direction if present
+            char outDir = '\0';
+            if (dir.HasValue)
+            {
+                switch (char.ToLowerInvariant(dir.Value))
+                {
+                    case 'n': outDir = 's'; break;
+                    case 's': outDir = 'n'; break;
+                    case 'e': outDir = 'e'; break;
+                    case 'w': outDir = 'w'; break;
+                    default: outDir = char.ToLowerInvariant(dir.Value); break;
+                }
+            }
+
+            return dir.HasValue
+                ? new string(new[] { piece, file, mirroredRank, outDir })
+                : new string(new[] { piece, file, mirroredRank });
+        }
+
+        var parts = goldMove.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < parts.Length; i++)
+        {
+            parts[i] = TransformToken(parts[i]);
+        }
+        return string.Join(" ", parts);
+    }
+
     private static string FlipVertical(string flat)
     {
         // flat is 8 rows of 8 characters, top (north) to bottom (south)

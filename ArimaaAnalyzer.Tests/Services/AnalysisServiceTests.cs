@@ -66,16 +66,17 @@ public class AnalysisServiceTests
     {
         var aei = $"setposition s \"rrrrrrrrecdmhdch                                HCDMRDCHERRRRRRR\"";
         
+        var notflippedBoard = NotationService.AeiToBoard(aei);
+        
         var test3 = "";
         
         var move = await RunSharp2015AeiSmokeAsync(
             aeistring: aei,
             skipNote: "Silver to play");
-
+        
         move.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
         move.Should().MatchRegex(@"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
 
-        var test = "";
     }
     
 
